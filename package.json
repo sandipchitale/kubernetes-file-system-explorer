@@ -3,7 +3,7 @@
     "displayName": "Kubernetes Pod File System Explorer",
     "icon": "images/icon.png",
     "description": "Kubernetes Pod File System Explorer.",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "keywords": [
         "kubernetes"
     ],
@@ -34,16 +34,16 @@
     "contributes": {
         "commands": [
             {
-                "command": "k8s.container.explorer",
-                "title": "Pod ls -F",
+                "command": "k8s.pod.container.file.view",
+                "title": "View file",
                 "category": "Kubernetes"
             }
         ],
         "menus": {
             "view/item/context": [
                 {
-                    "command": "k8s.container.explorer",
-                    "when": "viewItem =~ /vsKubernetes\\.resource\\.(pod)/i"
+                    "command": "k8s.pod.container.file.view",
+                    "when": "view == extension.vsKubernetesExplorer"
                 }
             ]
         }

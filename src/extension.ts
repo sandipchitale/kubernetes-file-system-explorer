@@ -5,10 +5,14 @@ import * as k8s from 'vscode-kubernetes-tools-api';
 
 
 class FileNode implements k8s.ClusterExplorerV1.Node {
+    private kubectl: k8s.KubectlV1;
+    private podName: string;
     private path: string;
     private name: string;
 
-    constructor(path: string, name: string) {
+    constructor(kubectl:  k8s.KubectlV1, podName: string, path: string, name: string) {
+        this.kubectl = kubectl;
+        this.podName = podName;
         this.path = path;
         this.name = name;
     }
@@ -22,6 +26,24 @@ class FileNode implements k8s.ClusterExplorerV1.Node {
         treeItem.tooltip = this.path + this.name;
         treeItem.iconPath = vscode.ThemeIcon.File;
         return treeItem;
+    }
+
+    async viewFile() {
+        const catResult = await this.kubectl.invokeCommand(`exec -it ${this.podName} -- cat ${this.path}${this.name}`);
+        if (!catResult || catResult.code !== 0) {
+            vscode.window.showErrorMessage(`Can't get contents of file: ${catResult ? catResult.stderr : 'unable to run cat command on file ${this.path}${this.name}'}`);
+            return;
+        }
+        const catCommandOutput = catResult.stdout;
+        if (catCommandOutput.trim().length > 0) {
+            vscode.workspace.openTextDocument({
+                content: catCommandOutput
+            }).then((doc) => {
+                vscode.window.showTextDocument(doc).then((editor) => {
+                    vscode.window.showInformationMessage(`Showing ${this.podName}:${this.path}${this.name}`);
+                });
+            });
+        }
     }
 }
 
@@ -52,7 +74,7 @@ class FolderNode implements k8s.ClusterExplorerV1.Node {
                 if (fileName.endsWith('/')) {
                     return new FolderNode(this.kubectl, this.podName, this.path + this.name, fileName)
                 } else {
-                    return new FileNode(this.path+this.name, fileName)
+                    return new FileNode(this.kubectl, this.podName, this.path+this.name, fileName)
                 }
             });
         }
@@ -82,23 +104,6 @@ class FileSystemNodeContributor {
     async getChildren(parent: k8s.ClusterExplorerV1.ClusterExplorerNode | undefined): Promise<k8s.ClusterExplorerV1.Node[]> {
         if (parent && parent.nodeType === 'resource' && parent.resourceKind.manifestKind === 'Pod') {
             return [ new FolderNode(this.kubectl, parent.name, '/', '') ];
-
-            // // Example of using the kubectl API to invoke a command
-            // const lsResult = await this.kubectl.invokeCommand(`exec -it ${parent.name} -- ls -F /`);
-
-            // if (!lsResult || lsResult.code !== 0) {
-            //     vscode.window.showErrorMessage(`Can't get resource usage: ${lsResult ? lsResult.stderr : 'unable to run kubectl'}`);
-            //     return;
-            // }
-            // const lsCommandOutput = lsResult.stdout;
-            // const fileNames = lsCommandOutput.split('\n');
-            // return fileNames.map((fileName) => {
-            //     if (fileName.endsWith('/')) {
-            //         return new FolderNode(this.kubectl, parent.name, '/', fileName)
-            //     } else {
-            //         return new FileNode(fileName)
-            //     }
-            // });
         }
         return [];
     }
@@ -107,7 +112,7 @@ class FileSystemNodeContributor {
 export async function activate(context: vscode.ExtensionContext) {
     const explorer = await k8s.extension.clusterExplorer.v1;
     if (!explorer.available) {
-        vscode.window.showErrorMessage(`Command not available.`);
+        vscode.window.showErrorMessage(`ClusterExplorer not available.`);
         return;
     }
 
@@ -118,6 +123,19 @@ export async function activate(context: vscode.ExtensionContext) {
     }
 
     explorer.api.registerNodeContributor(new FileSystemNodeContributor(kubectl.api));
+
+    const disposable = vscode.commands.registerCommand('k8s.pod.container.file.view', viewFile);
+    context.subscriptions.push(disposable);
+}
+
+async function viewFile(target?: any) {
+    if (target && target.nodeType === 'extension') {
+        if (target.impl instanceof FileNode) {
+            (target.impl as FileNode).viewFile();
+            return;
+        }
+    }
+    vscode.window.showErrorMessage(`View file command only work on node for a file in Pod(Container) filesystem.`);
 }
 
 export function deactivate() {

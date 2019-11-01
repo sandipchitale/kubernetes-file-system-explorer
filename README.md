@@ -14,9 +14,15 @@ It basically starts at `/` by running the following Kubectl command in the Pod t
 
 `> kubectl exec -it pod-name -- ls -f /`
 
-As the treed nodes for directories are expanded e.g. `/etc/`, it runs
+As the treed nodes for directories are expanded e.g. `/etc/`, it basically runs:
 
 `> kubectl exec -it pod-name -- ls -f /etc/`
+
+It also supports the following command:
+
+`k8s.pod.container.file.view` (View file) - Show the content of the file in editor. It basically run:
+
+`> kubectl exec -it pod-name -- cat /path/to/file`
 
 
 ## Requirements
@@ -36,3 +42,7 @@ Initial release.
 ### 1.0.1
 
 Add screenshot and description.
+
+### 1.0.2
+
+Add command `k8s.pod.container.file.view` (View file) - Show the content of the file in editor.
