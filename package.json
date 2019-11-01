@@ -1,0 +1,67 @@
+{
+    "name": "kubernetes-file-system-explorer",
+    "displayName": "Kubernetes Pod File System Explorer",
+    "icon": "images/icon.png",
+    "description": "Kubernetes Pod File System Explorer.",
+    "version": "1.0.0",
+    "keywords": [
+        "kubernetes"
+    ],
+    "extensionDependencies": [
+        "ms-kubernetes-tools.vscode-kubernetes-tools"
+    ],
+    "publisher": "sandipchitale",
+    "author": {
+        "name": "Sandip Chitale"
+    },
+    "maintainers": [
+        "Sandip Chitale <sandipchitale@gmail.com>"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/sandipchitale/kubernetes-no-load-on-select"
+    },
+    "engines": {
+        "vscode": "^1.37.0"
+    },
+    "categories": [
+        "Other"
+    ],
+    "activationEvents": [
+        "onView:extension.vsKubernetesExplorer"
+    ],
+    "main": "./out/extension",
+    "contributes": {
+        "commands": [
+            {
+                "command": "k8s.container.explorer",
+                "title": "Pod ls -F",
+                "category": "Kubernetes"
+            }
+        ],
+        "menus": {
+            "view/item/context": [
+                {
+                    "command": "k8s.container.explorer",
+                    "when": "viewItem =~ /vsKubernetes\\.resource\\.(pod)/i"
+                }
+            ]
+        }
+    },
+    "scripts": {
+        "vscode:prepublish": "npm run compile",
+        "compile": "tsc -p ./",
+        "watch": "tsc -watch -p ./",
+        "postinstall": "node ./node_modules/vscode/bin/install",
+        "test": "npm run compile && node ./node_modules/vscode/bin/test"
+    },
+    "devDependencies": {
+        "typescript": "^2.6.1",
+        "vscode": "^1.1.6",
+        "@types/node": "^7.0.43",
+        "@types/mocha": "^2.2.42"
+    },
+    "dependencies": {
+        "vscode-kubernetes-tools-api": "^1.0.0"
+    }
+}
