@@ -7,12 +7,14 @@ import * as k8s from 'vscode-kubernetes-tools-api';
 class FileNode implements k8s.ClusterExplorerV1.Node {
     private kubectl: k8s.KubectlV1;
     private podName: string;
+    private containerName: string;
     private path: string;
     private name: string;
 
-    constructor(kubectl:  k8s.KubectlV1, podName: string, path: string, name: string) {
+    constructor(kubectl:  k8s.KubectlV1, podName: string, path: string, name: string, containerName: string) {
         this.kubectl = kubectl;
         this.podName = podName;
+        this.containerName = containerName;
         this.path = path;
         this.name = name;
     }
@@ -29,7 +31,7 @@ class FileNode implements k8s.ClusterExplorerV1.Node {
     }
 
     async viewFile() {
-        const catResult = await this.kubectl.invokeCommand(`exec -it ${this.podName} -- cat ${this.path}${this.name}`);
+        const catResult = await this.kubectl.invokeCommand(`exec -it ${this.podName} ${this.containerName ? '-c ' + this.containerName : ''} -- cat ${this.path}${this.name}`);
         if (!catResult || catResult.code !== 0) {
             vscode.window.showErrorMessage(`Can't get contents of file: ${catResult ? catResult.stderr : 'unable to run cat command on file ${this.path}${this.name}'}`);
             return;
@@ -50,18 +52,20 @@ class FileNode implements k8s.ClusterExplorerV1.Node {
 class FolderNode implements k8s.ClusterExplorerV1.Node {
     private kubectl: k8s.KubectlV1;
     private podName: string;
+    private containerName: string;
     private path: string;
     private name: string;
 
-    constructor(kubectl:  k8s.KubectlV1, podName: string, path: string, name: string) {
+    constructor(kubectl:  k8s.KubectlV1, podName: string, path: string, name: string, containerName: string) {
         this.kubectl = kubectl;
         this.podName = podName;
+        this.containerName = containerName;
         this.path = path;
         this.name = name;
     }
 
     async getChildren(): Promise<k8s.ClusterExplorerV1.Node[]> {
-        const lsResult = await this.kubectl.invokeCommand(`exec -it ${this.podName} -- ls -F ${this.path}${this.name}`);
+        const lsResult = await this.kubectl.invokeCommand(`exec -it ${this.podName} ${this.containerName ? '-c ' + this.containerName : ''} -- ls -F ${this.path}${this.name}`);
 
         if (!lsResult || lsResult.code !== 0) {
             vscode.window.showErrorMessage(`Can't get resource usage: ${lsResult ? lsResult.stderr : 'unable to run kubectl'}`);
@@ -72,9 +76,9 @@ class FolderNode implements k8s.ClusterExplorerV1.Node {
             const fileNames = lsCommandOutput.split('\n').filter((fileName) => fileName && fileName.trim().length > 0);
             return fileNames.map((fileName) => {
                 if (fileName.endsWith('/')) {
-                    return new FolderNode(this.kubectl, this.podName, this.path + this.name, fileName)
+                    return new FolderNode(this.kubectl, this.podName, this.path + this.name, fileName, this.containerName);
                 } else {
-                    return new FileNode(this.kubectl, this.podName, this.path+this.name, fileName)
+                    return new FileNode(this.kubectl, this.podName, this.path+this.name, fileName, this.containerName);
                 }
             });
         }
@@ -82,7 +86,7 @@ class FolderNode implements k8s.ClusterExplorerV1.Node {
     }
 
     getTreeItem(): vscode.TreeItem {
-        const treeItem = new vscode.TreeItem(this.name.trim().length > 0 ? this.name : this.path, vscode.TreeItemCollapsibleState.Collapsed);
+        const treeItem = new vscode.TreeItem(this.name.trim().length > 0 ? this.name : (this.containerName ? this.containerName + ':' : '') + this.path, vscode.TreeItemCollapsibleState.Collapsed);
         treeItem.tooltip = this.path + this.name;
         treeItem.iconPath = vscode.ThemeIcon.Folder;
         return treeItem;
@@ -103,7 +107,22 @@ class FileSystemNodeContributor {
 
     async getChildren(parent: k8s.ClusterExplorerV1.ClusterExplorerNode | undefined): Promise<k8s.ClusterExplorerV1.Node[]> {
         if (parent && parent.nodeType === 'resource' && parent.resourceKind.manifestKind === 'Pod') {
-            return [ new FolderNode(this.kubectl, parent.name, '/', '') ];
+            const explorer = await k8s.extension.clusterExplorer.v1;
+            if (explorer.available) {
+                const kubectl = await k8s.extension.kubectl.v1;
+                if (kubectl.available) {
+                    const podDetails = await kubectl.api.invokeCommand(`get pods ${parent.name} -o json`);
+                    if (podDetails && podDetails.stdout) {
+                        const podDetailsAsJson = JSON.parse(podDetails.stdout);
+                        const containers = [];
+                        podDetailsAsJson.spec.containers.forEach((container) => {
+                            containers.push(new FolderNode(this.kubectl, parent.name, '/', '', container.name));
+                        });
+                        return containers;
+                    }
+                }
+            }
+            return [ new FolderNode(this.kubectl, parent.name, '/', '', undefined) ];
         }
         return [];
     }

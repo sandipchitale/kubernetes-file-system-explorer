@@ -50,3 +50,7 @@ Add command `k8s.pod.container.file.view` (View file) - Show the content of the 
 ### 1.0.3
 
 Show container.
+
+### 1.0.4
+
+Show filesystem of all container.
