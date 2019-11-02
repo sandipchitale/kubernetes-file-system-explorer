@@ -54,3 +54,7 @@ Show container.
 ### 1.0.4
 
 Show filesystem of all container.
+
+### 1.0.5
+
+Deal with links.

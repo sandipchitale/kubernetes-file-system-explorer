@@ -1,5 +1,9 @@
 # Change Log
 
+### 1.0.5
+
+- Deal with links
+
 ### 1.0.4
 
 - Show filesystem of all container.

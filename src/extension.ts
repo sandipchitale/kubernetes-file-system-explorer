@@ -26,8 +26,11 @@ class FileNode implements k8s.ClusterExplorerV1.Node {
     getTreeItem(): vscode.TreeItem {
         const treeItem = new vscode.TreeItem(this.name, vscode.TreeItemCollapsibleState.None);
         treeItem.tooltip = this.path + this.name;
-        treeItem.iconPath = vscode.ThemeIcon.File;
         return treeItem;
+    }
+
+    isFile() {
+        return !this.name.endsWith('@');
     }
 
     async viewFile() {
@@ -133,13 +136,15 @@ class ContainerNode implements k8s.ClusterExplorerV1.Node {
     namespace: string;
     name: string;
     private image: string;
+    private initContainer: boolean;
 
-    constructor(kubectl:  k8s.KubectlV1, podName: string, namespace: string, name: string, image: string) {
+    constructor(kubectl:  k8s.KubectlV1, podName: string, namespace: string, name: string, image: string, initContainer: boolean) {
         this.kubectl = kubectl;
         this.podName = podName;
         this.namespace = namespace;
         this.name = name;
         this.image = image;
+        this.initContainer = initContainer;
     }
 
     async getChildren(): Promise<k8s.ClusterExplorerV1.Node[]> {
@@ -148,8 +153,7 @@ class ContainerNode implements k8s.ClusterExplorerV1.Node {
 
     getTreeItem(): vscode.TreeItem {
         const treeItem = new vscode.TreeItem(`${this.name} ( ${this.image } )`, vscode.TreeItemCollapsibleState.None);
-        treeItem.tooltip = `${this.name} ( ${this.image } )`;
-        treeItem.iconPath = vscode.ThemeIcon.File;
+        treeItem.tooltip = `${this.initContainer ? 'Init Container:' : 'Container: ' } ${this.name} ( ${this.image } )`;
         return treeItem;
     }
 }
@@ -176,8 +180,13 @@ class ContainerNodeContributor {
                     const podDetails = await kubectl.api.invokeCommand(`get pods ${parent.name} -o json`);
                     if (podDetails && podDetails.stdout) {
                         const podDetailsAsJson = JSON.parse(podDetails.stdout);
+                        if (podDetailsAsJson.spec.initContainers) {
+                            podDetailsAsJson.spec.initContainers.forEach((container) => {
+                                containers.push(new ContainerNode(this.kubectl, parent.namespace, parent.name, container.name, container.image, true));
+                            });
+                        }
                         podDetailsAsJson.spec.containers.forEach((container) => {
-                            containers.push(new ContainerNode(this.kubectl, parent.namespace, parent.name, container.name, container.image));
+                            containers.push(new ContainerNode(this.kubectl, parent.namespace, parent.name, container.name, container.image, false));
                         });
                     }
                 }
@@ -210,8 +219,10 @@ async function viewFile(target?: any) {
 
     if (target && target.nodeType === 'extension') {
         if (target.impl instanceof FileNode) {
-            (target.impl as FileNode).viewFile();
-            return;
+            if ((target.impl as FileNode).isFile()) {
+                (target.impl as FileNode).viewFile();
+                return;
+            }
         }
     }
     vscode.window.showErrorMessage(`View file command only work on node for a file in Pod(Container) filesystem.`);
