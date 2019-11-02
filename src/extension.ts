@@ -3,7 +3,6 @@
 import * as vscode from 'vscode';
 import * as k8s from 'vscode-kubernetes-tools-api';
 
-
 class FileNode implements k8s.ClusterExplorerV1.Node {
     private kubectl: k8s.KubectlV1;
     private podName: string;
@@ -16,7 +15,9 @@ class FileNode implements k8s.ClusterExplorerV1.Node {
         this.podName = podName;
         this.containerName = containerName;
         this.path = path;
-        this.name = name;
+        this.name = name
+            .replace(/\@$/, '')
+            .replace(/\*$/, '');
     }
 
     async getChildren(): Promise<k8s.ClusterExplorerV1.Node[]> {
@@ -30,7 +31,7 @@ class FileNode implements k8s.ClusterExplorerV1.Node {
     }
 
     isFile() {
-        return !this.name.endsWith('@');
+        return true;
     }
 
     async viewFile() {
@@ -93,6 +94,37 @@ class FolderNode implements k8s.ClusterExplorerV1.Node {
         treeItem.tooltip = this.path + this.name;
         treeItem.iconPath = vscode.ThemeIcon.Folder;
         return treeItem;
+    }
+
+    async findImpl(findArgs) {
+        const findResult = await this.kubectl.invokeCommand(`exec -it ${this.podName} ${this.containerName ? '-c ' + this.containerName : ''} -- find ${this.path}${this.name} ${findArgs}`);
+        if (!findResult || findResult.code !== 0) {
+            vscode.window.showErrorMessage(`Can't run find: ${findResult ? findResult.stderr : 'unable to run find command on folder ${this.path}${this.name}'}`);
+            return;
+        }
+        const findCommandOutput = findResult.stdout;
+        if (findCommandOutput.trim().length > 0) {
+            vscode.workspace.openTextDocument({
+                content: findCommandOutput
+            }).then((doc) => {
+                vscode.window.showTextDocument(doc).then((editor) => {
+                    vscode.window.showInformationMessage(`Showing find results ${this.podName}:${this.path}${this.name}`);
+                });
+            });
+        }
+    }
+
+    async find() {
+        let findArgs = '';
+        this.findImpl(findArgs);
+        // vscode.window.showInputBox({
+        //     prompt: 'Additional find args e.g. -name host\* -type f',
+        //     value: '-type d'
+        // }).then((args) => {
+        //     if (args) {
+        //         findArgs = args;
+        //     }
+        // });
     }
 }
 
@@ -211,7 +243,9 @@ export async function activate(context: vscode.ExtensionContext) {
 
     explorer.api.registerNodeContributor(new ContainerNodeContributor(kubectl.api));
     explorer.api.registerNodeContributor(new FileSystemNodeContributor(kubectl.api));
-    const disposable = vscode.commands.registerCommand('k8s.pod.container.file.view', viewFile);
+    let disposable = vscode.commands.registerCommand('k8s.pod.container.file.view', viewFile);
+    context.subscriptions.push(disposable);
+    disposable = vscode.commands.registerCommand('k8s.pod.container.folder.find', find);
     context.subscriptions.push(disposable);
 }
 
@@ -226,6 +260,17 @@ async function viewFile(target?: any) {
         }
     }
     vscode.window.showErrorMessage(`View file command only work on node for a file in Pod(Container) filesystem.`);
+}
+
+async function find(target?: any) {
+
+    if (target && target.nodeType === 'extension') {
+        if (target.impl instanceof FolderNode) {
+            (target.impl as FolderNode).find();
+            return;
+        }
+    }
+    vscode.window.showErrorMessage(`Find command only work on node for a file in Pod(Container) filesystem.`);
 }
 
 export function deactivate() {

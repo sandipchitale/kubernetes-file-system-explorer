@@ -14,22 +14,28 @@ For example, the following screenshot shows the
 
 ![Pod's filesystem](images/filesystem.png)
 
+
 ### How it works
 
 It basically starts at `/` by running the following Kubectl command in the Pod to get the file listing:
 
-`> kubectl exec -it pod-name -- ls -f /`
+`kubectl exec -it pod-name -c containername -- ls -f /`
 
-As the treed nodes for directories are expanded e.g. `/etc/`, it basically runs:
+As the tree nodes for directories are expanded e.g. `/etc/`, it basically runs:
 
-`> kubectl exec -it pod-name -- ls -f /etc/`
+`kubectl exec -it pod-name -c containername -- ls -f /etc/`
 
-It also supports the following command:
+to get listing of files and created tree nodes for them.
 
-`k8s.pod.container.file.view` (View file) - Show the content of the file in editor. It basically run:
+It also supports the following commands:
 
-`> kubectl exec -it pod-name -- cat /path/to/file`
+`k8s.pod.container.file.view` (View file) - Show the content of the file in editor. It basically runs:
 
+`kubectl exec -it pod-name -c containername -- cat /path/to/file`
+
+`k8s.pod.container.folder.find` (Find) - Show the output of `find folderpath` in editor. It basically runs:
+
+`kubectl exec -it pod-name -c containername -- find /path/to/folder`
 
 ## Requirements
 
@@ -68,3 +74,7 @@ Deal with links.
 ### 1.0.6
 
 Updated screenshot.
+
+### 1.0.7
+
+Added `Find` command for folders.

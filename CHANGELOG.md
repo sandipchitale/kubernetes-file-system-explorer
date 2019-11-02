@@ -1,5 +1,9 @@
 # Change Log
 
+### 1.0.7
+
+- Added `Find` command for folders.
+
 ### 1.0.6
 
 - Updated screenshot.
