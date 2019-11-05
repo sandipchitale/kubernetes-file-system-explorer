@@ -27,6 +27,7 @@ class FileNode implements k8s.ClusterExplorerV1.Node {
     getTreeItem(): vscode.TreeItem {
         const treeItem = new vscode.TreeItem(this.name, vscode.TreeItemCollapsibleState.None);
         treeItem.tooltip = this.path + this.name;
+        treeItem.contextValue = 'containerfilenode';
         return treeItem;
     }
 
@@ -93,6 +94,7 @@ class FolderNode implements k8s.ClusterExplorerV1.Node {
         const treeItem = new vscode.TreeItem(this.name.trim().length > 0 ? this.name : (this.containerName ? this.containerName + ':' : '') + this.path, vscode.TreeItemCollapsibleState.Collapsed);
         treeItem.tooltip = this.path + this.name;
         treeItem.iconPath = vscode.ThemeIcon.Folder;
+        treeItem.contextValue = 'containerfoldernode';
         return treeItem;
     }
 
@@ -117,14 +119,6 @@ class FolderNode implements k8s.ClusterExplorerV1.Node {
     async find() {
         let findArgs = '';
         this.findImpl(findArgs);
-        // vscode.window.showInputBox({
-        //     prompt: 'Additional find args e.g. -name host\* -type f',
-        //     value: '-type d'
-        // }).then((args) => {
-        //     if (args) {
-        //         findArgs = args;
-        //     }
-        // });
     }
 }
 
@@ -186,6 +180,7 @@ class ContainerNode implements k8s.ClusterExplorerV1.Node {
     getTreeItem(): vscode.TreeItem {
         const treeItem = new vscode.TreeItem(`${this.name} ( ${this.image } )`, vscode.TreeItemCollapsibleState.None);
         treeItem.tooltip = `${this.initContainer ? 'Init Container:' : 'Container: ' } ${this.name} ( ${this.image } )`;
+        treeItem.contextValue = 'containernode';
         return treeItem;
     }
 }
@@ -250,7 +245,6 @@ export async function activate(context: vscode.ExtensionContext) {
 }
 
 async function viewFile(target?: any) {
-
     if (target && target.nodeType === 'extension') {
         if (target.impl instanceof FileNode) {
             if ((target.impl as FileNode).isFile()) {
@@ -263,7 +257,6 @@ async function viewFile(target?: any) {
 }
 
 async function find(target?: any) {
-
     if (target && target.nodeType === 'extension') {
         if (target.impl instanceof FolderNode) {
             (target.impl as FolderNode).find();

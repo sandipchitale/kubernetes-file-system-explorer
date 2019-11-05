@@ -78,3 +78,7 @@ Updated screenshot.
 ### 1.0.7
 
 Added `Find` command for folders.
+
+### 1.0.8
+
+Show correct commands on Container Folder and File nodes.
