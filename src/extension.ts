@@ -3,16 +3,18 @@
 import * as vscode from 'vscode';
 import * as k8s from 'vscode-kubernetes-tools-api';
 
+const KUBERNETES_FILE_VIEW = 'kubernetes-file-view';
+const KUBERNETES_FOLDER_FIND = 'kubernetes-folder-find';
+const KUBERNETES_FOLDER_LS_AL = 'kubernetes-folder-ls-al';
+
 class FileNode implements k8s.ClusterExplorerV1.Node {
-    private kubectl: k8s.KubectlV1;
     private podName: string;
     private namespace: string;
     private containerName: string;
     private path: string;
     private name: string;
 
-    constructor(kubectl:  k8s.KubectlV1, podName: string, namespace: string, path: string, name: string, containerName: string) {
-        this.kubectl = kubectl;
+    constructor(podName: string, namespace: string, path: string, name: string, containerName: string) {
         this.podName = podName;
         this.namespace = namespace;
         this.containerName = containerName;
@@ -38,24 +40,8 @@ class FileNode implements k8s.ClusterExplorerV1.Node {
     }
 
     async viewFile() {
-        let doc = await vscode.workspace.openTextDocument(vscode.Uri.parse(`kubernetes:${this.podName}:${this.namespace}:${this.containerName}:${this.path}/${this.name}`));
+        let doc = await vscode.workspace.openTextDocument(vscode.Uri.parse(`kubernetes-file-view:${this.podName}:${this.namespace}:${this.containerName}:${this.path}/${this.name}`));
         await vscode.window.showTextDocument(doc, { preview: false });
-
-        // const catResult = await this.kubectl.invokeCommand(`exec -it ${this.podName} ${this.containerName ? '-c ' + this.containerName : ''} --namespace ${this.namespace} -- cat ${this.path}${this.name}`);
-        // if (!catResult || catResult.code !== 0) {
-        //     vscode.window.showErrorMessage(`Can't get contents of file: ${catResult ? catResult.stderr : 'unable to run cat command on file ${this.path}${this.name}'}`);
-        //     return;
-        // }
-        // const catCommandOutput = catResult.stdout;
-        // if (catCommandOutput.trim().length > 0) {
-        //     vscode.workspace.openTextDocument({
-        //         content: catCommandOutput
-        //     }).then((doc) => {
-        //         vscode.window.showTextDocument(doc).then((editor) => {
-        //             vscode.window.showInformationMessage(`Showing ${this.podName}:${this.path}${this.name}`);
-        //         });
-        //     });
-        // }
     }
 }
 
@@ -90,7 +76,7 @@ class FolderNode implements k8s.ClusterExplorerV1.Node {
                 if (fileName.endsWith('/')) {
                     return new FolderNode(this.kubectl, this.podName, this.namespace, this.path + this.name, fileName, this.containerName);
                 } else {
-                    return new FileNode(this.kubectl, this.podName, this.namespace, this.path+this.name, fileName, this.containerName);
+                    return new FileNode(this.podName, this.namespace, this.path+this.name, fileName, this.containerName);
                 }
             });
         }
@@ -106,31 +92,22 @@ class FolderNode implements k8s.ClusterExplorerV1.Node {
     }
 
     async findImpl(findArgs) {
-        const findResult = await this.kubectl.invokeCommand(`exec -it ${this.podName} ${this.containerName ? '-c ' + this.containerName : ''} --namespace ${this.namespace} -- find ${this.path}${this.name} ${findArgs}`);
-        if (!findResult || findResult.code !== 0) {
-            vscode.window.showErrorMessage(`Can't run find: ${findResult ? findResult.stderr : 'unable to run find command on folder ${this.path}${this.name}'}`);
-            return;
-        }
-        const findCommandOutput = findResult.stdout;
-        if (findCommandOutput.trim().length > 0) {
-            vscode.workspace.openTextDocument({
-                content: findCommandOutput
-            }).then((doc) => {
-                vscode.window.showTextDocument(doc).then((editor) => {
-                    vscode.window.showInformationMessage(`Showing find results ${this.podName}:${this.path}${this.name}`);
-                });
-            });
-        }
+        let doc = await vscode.workspace.openTextDocument(vscode.Uri.parse(`${KUBERNETES_FOLDER_FIND}:${this.podName}:${this.namespace}:${this.containerName}:${this.path}${this.name}`));
+        await vscode.window.showTextDocument(doc, { preview: false });
     }
 
-    async find() {
+    find() {
         let findArgs = '';
         this.findImpl(findArgs);
+    }
+
+    async lsDashAl() {
+        let doc = await vscode.workspace.openTextDocument(vscode.Uri.parse(`${KUBERNETES_FOLDER_LS_AL}:${this.podName}:${this.namespace}:${this.containerName}:${this.path}${this.name}`));
+        await vscode.window.showTextDocument(doc, { preview: false });
     }
 }
 
 class FileSystemNodeContributor {
-
     private kubectl: k8s.KubectlV1;
 
     constructor(kubectl:  k8s.KubectlV1) {
@@ -240,16 +217,26 @@ class KubernetesContainerFileDocumentProvider implements vscode.TextDocumentCont
     async provideTextDocumentContent(uri: vscode.Uri): Promise<string> {
         const parts = uri.path.split(':');
 
-        const catResult = await this.kubectl.invokeCommand(`exec -it ${parts[0]}  -c ${parts[2]} --namespace ${parts[1]} -- cat ${parts[3]}`);
-        if (!catResult || catResult.code !== 0) {
-            vscode.window.showErrorMessage(`Can't get contents of file: ${catResult ? catResult.stderr : 'unable to run cat command on file ${this.path}${this.name}'}`);
-            return uri.toString();
+        let command;
+        if (uri.scheme === KUBERNETES_FILE_VIEW) {
+            command = 'cat';
+        } else if (uri.scheme === KUBERNETES_FOLDER_FIND) {
+            command = 'find';
+        } else if (uri.scheme === KUBERNETES_FOLDER_LS_AL) {
+            command = 'ls -al';
         }
-        const catCommandOutput = catResult.stdout;
-        if (catCommandOutput.trim().length > 0) {
-            return catCommandOutput;
+        if (command) {
+            const result = await this.kubectl.invokeCommand(`exec -it ${parts[0]}  -c ${parts[2]} --namespace ${parts[1]} -- ${command} ${parts[3]}`);
+            if (!result || result.code !== 0) {
+                vscode.window.showErrorMessage(`Can't get data: ${result ? result.stderr : 'unable to run cat command on file ${this.path}${this.name}'}`);
+                return `${command} ${uri.path}\n ${result.stderr}`;
+            }
+            let output = (uri.scheme === KUBERNETES_FILE_VIEW) ?  '' : `${command} ${parts[3]}\n\n`;
+            output += result.stdout;
+            if (output) {
+                return output;
+            }
         }
-
         return uri.toString();
     }
 }
@@ -275,9 +262,15 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(disposable);
     disposable = vscode.commands.registerCommand('k8s.pod.container.folder.find', find);
     context.subscriptions.push(disposable);
+    disposable = vscode.commands.registerCommand('k8s.pod.container.folder.ls-al', lsDashAl);
+    context.subscriptions.push(disposable);
 
-    disposable = vscode.workspace.registerTextDocumentContentProvider(
-        'kubernetes', new KubernetesContainerFileDocumentProvider(kubectl.api));
+    const kubernetesContainerFileDocumentProvider = new KubernetesContainerFileDocumentProvider(kubectl.api);
+    disposable = vscode.workspace.registerTextDocumentContentProvider(KUBERNETES_FILE_VIEW, kubernetesContainerFileDocumentProvider);
+    context.subscriptions.push(disposable);
+    disposable = vscode.workspace.registerTextDocumentContentProvider(KUBERNETES_FOLDER_FIND, kubernetesContainerFileDocumentProvider);
+    context.subscriptions.push(disposable);
+    disposable = vscode.workspace.registerTextDocumentContentProvider(KUBERNETES_FOLDER_LS_AL, kubernetesContainerFileDocumentProvider);
     context.subscriptions.push(disposable);
 }
 
@@ -309,6 +302,15 @@ async function find(target?: any) {
     if (target && target.nodeType === 'extension') {
         if (target.impl instanceof FolderNode) {
             (target.impl as FolderNode).find();
+            return;
+        }
+    }
+}
+
+async function lsDashAl(target?: any) {
+    if (target && target.nodeType === 'extension') {
+        if (target.impl instanceof FolderNode) {
+            (target.impl as FolderNode).lsDashAl();
             return;
         }
     }

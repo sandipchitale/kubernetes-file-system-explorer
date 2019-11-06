@@ -1,5 +1,9 @@
 # Change Log
 
+### 1.0.11
+
+- `ls -al` command on folders.
+
 ### 1.0.10
 
 - Use TextDocumentContentProvider.

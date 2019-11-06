@@ -90,3 +90,7 @@ Terminal command on Container node.
 ### 1.0.10
 
 Use TextDocumentContentProvider.
+
+### 1.0.11
+
+`ls -al` command on folder nodes.
