@@ -94,3 +94,7 @@ Use TextDocumentContentProvider.
 ### 1.0.11
 
 `ls -al` command on folder nodes.
+
+### 1.0.12
+
+Internal.
