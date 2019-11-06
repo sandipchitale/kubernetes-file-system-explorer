@@ -158,7 +158,7 @@ class FileSystemNodeContributor {
 }
 class ContainerNode implements k8s.ClusterExplorerV1.Node {
     private kubectl: k8s.KubectlV1;
-    private podName: string;
+    podName: string;
     namespace: string;
     name: string;
     private image: string;
@@ -209,11 +209,11 @@ class ContainerNodeContributor {
                         const podDetailsAsJson = JSON.parse(podDetails.stdout);
                         if (podDetailsAsJson.spec.initContainers) {
                             podDetailsAsJson.spec.initContainers.forEach((container) => {
-                                containers.push(new ContainerNode(this.kubectl, parent.namespace, parent.name, container.name, container.image, true));
+                                containers.push(new ContainerNode(this.kubectl, parent.name, parent.namespace, container.name, container.image, true));
                             });
                         }
                         podDetailsAsJson.spec.containers.forEach((container) => {
-                            containers.push(new ContainerNode(this.kubectl, parent.namespace, parent.name, container.name, container.image, false));
+                            containers.push(new ContainerNode(this.kubectl, parent.name, parent.namespace, container.name, container.image, false));
                         });
                     }
                 }
@@ -238,10 +238,25 @@ export async function activate(context: vscode.ExtensionContext) {
 
     explorer.api.registerNodeContributor(new ContainerNodeContributor(kubectl.api));
     explorer.api.registerNodeContributor(new FileSystemNodeContributor(kubectl.api));
-    let disposable = vscode.commands.registerCommand('k8s.pod.container.file.view', viewFile);
+    let disposable = vscode.commands.registerCommand('k8s.pod.container.terminal', terminal);
+    context.subscriptions.push(disposable);
+    disposable = vscode.commands.registerCommand('k8s.pod.container.file.view', viewFile);
     context.subscriptions.push(disposable);
     disposable = vscode.commands.registerCommand('k8s.pod.container.folder.find', find);
     context.subscriptions.push(disposable);
+}
+
+async function terminal(target?: any) {
+    if (target && target.nodeType === 'extension') {
+        if (target.impl instanceof ContainerNode) {
+            if (vscode.window.activeTerminal) {
+                const container = target.impl as ContainerNode;
+                vscode.window.activeTerminal.sendText(
+`kubectl exec -it ${container.podName} -c ${container.name} --namespace ${container.namespace} -- sh`
+                )
+            }
+        }
+    }
 }
 
 async function viewFile(target?: any) {
@@ -253,7 +268,6 @@ async function viewFile(target?: any) {
             }
         }
     }
-    vscode.window.showErrorMessage(`View file command only work on node for a file in Pod(Container) filesystem.`);
 }
 
 async function find(target?: any) {
@@ -263,7 +277,6 @@ async function find(target?: any) {
             return;
         }
     }
-    vscode.window.showErrorMessage(`Find command only work on node for a file in Pod(Container) filesystem.`);
 }
 
 export function deactivate() {

@@ -82,3 +82,7 @@ Added `Find` command for folders.
 ### 1.0.8
 
 Show correct commands on Container Folder and File nodes.
+
+### 1.0.9
+
+Terminal command on Container node.

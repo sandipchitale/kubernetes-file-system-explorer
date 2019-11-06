@@ -1,5 +1,9 @@
 # Change Log
 
+### 1.0.9
+
+- Terminal command on Container node.
+
 ### 1.0.8
 
 - Show correct commands on Container Folder and File nodes.
