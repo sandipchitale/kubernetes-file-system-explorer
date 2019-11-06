@@ -1,5 +1,9 @@
 # Change Log
 
+### 1.0.10
+
+- Use TextDocumentContentProvider.
+
 ### 1.0.9
 
 - Terminal command on Container node.

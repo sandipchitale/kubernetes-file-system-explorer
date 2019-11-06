@@ -86,3 +86,7 @@ Show correct commands on Container Folder and File nodes.
 ### 1.0.9
 
 Terminal command on Container node.
+
+### 1.0.10
+
+Use TextDocumentContentProvider.
