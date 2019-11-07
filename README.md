@@ -98,3 +98,7 @@ Use TextDocumentContentProvider.
 ### 1.0.12
 
 Internal.
+
+### 1.0.13
+
+Terminal on Kubernetes nodes using nsenter (MS Windows only).

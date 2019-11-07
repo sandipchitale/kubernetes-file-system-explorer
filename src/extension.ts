@@ -2,6 +2,7 @@
 
 import * as vscode from 'vscode';
 import * as k8s from 'vscode-kubernetes-tools-api';
+import { platform } from 'os';
 
 const KUBERNETES_FILE_VIEW = 'kubernetes-file-view';
 const KUBERNETES_FOLDER_FIND = 'kubernetes-folder-find';
@@ -256,7 +257,9 @@ export async function activate(context: vscode.ExtensionContext) {
 
     explorer.api.registerNodeContributor(new ContainerNodeContributor(kubectl.api));
     explorer.api.registerNodeContributor(new FileSystemNodeContributor(kubectl.api));
-    let disposable = vscode.commands.registerCommand('k8s.pod.container.terminal', terminal);
+    let disposable = vscode.commands.registerCommand('k8s.node.terminal', nodeTerminal);
+    context.subscriptions.push(disposable);
+    disposable = vscode.commands.registerCommand('k8s.pod.container.terminal', terminal);
     context.subscriptions.push(disposable);
     disposable = vscode.commands.registerCommand('k8s.pod.container.file.view', viewFile);
     context.subscriptions.push(disposable);
@@ -274,6 +277,42 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(disposable);
 }
 
+function nodeTerminalImpl(terminal: vscode.Terminal, nodeName: string) {
+    terminal.sendText(`cls`);
+    terminal.sendText(`function prompt {"> "}`);
+    terminal.sendText(`$nodeName = '${nodeName}'`);
+    terminal.sendText(`$overrides = '{"spec":{"hostPID":true,"hostNetwork":true,"nodeSelector":{"kubernetes.io/hostname":"' + $nodeName + '"},"tolerations":[{"operator":"Exists"}],"containers":[{"name":"nsenter","image":"alexeiled/nsenter:2.34","command":["/nsenter","--all","--target=1","--","su","-"],"stdin":true,"tty":true,"securityContext":{"privileged":true}}]}}' | ConvertTo-Json`);
+    terminal.sendText(`cls`);
+    terminal.sendText(`kubectl.exe run ncenter-${nodeName} --restart=Never -it --rm --image=overriden --overrides=$overrides --attach $nodeName`);
+    terminal.show();
+}
+
+async function nodeTerminal(target?: any) {
+    const explorer = await k8s.extension.clusterExplorer.v1;
+    if (!explorer.available) {
+        return;
+    }
+    const commandTarget = explorer.api.resolveCommandTarget(target);
+    if (commandTarget) {
+        if (commandTarget.nodeType === 'resource') {
+            if (commandTarget.resourceKind.manifestKind === 'Node') {
+                if (process.platform === 'win32') {
+                    const shell = vscode.workspace.getConfiguration().get<string>('terminal.integrated.shell.windows');
+                    if (shell.indexOf('powershell') === -1) {
+                        vscode.window.showErrorMessage(`Only works when 'terminal.integrated.shell.windows' is set to Powershell.`);
+                    } else {
+                        const nodeName = commandTarget.name;
+                        nodeTerminalImpl(vscode.window.createTerminal({name: `ncenter-${nodeName}`}), nodeName);
+                    }
+                    return;
+                } else {
+                    vscode.window.showErrorMessage(`Only works on windows.`);
+                }
+            }
+        }
+    }
+
+}
 async function terminal(target?: any) {
     if (target && target.nodeType === 'extension') {
         if (target.impl instanceof ContainerNode) {
