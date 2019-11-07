@@ -1,5 +1,9 @@
 # Change Log
 
+### 1.0.14
+
+- Detect hostName from label.
+
 ### 1.0.13
 
 - Terminal on Kubernetes nodes using nsenter (MS Windows only).

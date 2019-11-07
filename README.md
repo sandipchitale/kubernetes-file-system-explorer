@@ -102,3 +102,7 @@ Internal.
 ### 1.0.13
 
 Terminal on Kubernetes nodes using nsenter (MS Windows only).
+
+### 1.0.14
+
+Detect hostName from label.

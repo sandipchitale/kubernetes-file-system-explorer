@@ -277,11 +277,12 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(disposable);
 }
 
-function nodeTerminalImpl(terminal: vscode.Terminal, nodeName: string) {
+function nodeTerminalImpl(terminal: vscode.Terminal, nodeName: string, hostName: string) {
     terminal.sendText(`cls`);
     terminal.sendText(`function prompt {"> "}`);
+    terminal.sendText(`$hostName = '${hostName}'`);
     terminal.sendText(`$nodeName = '${nodeName}'`);
-    terminal.sendText(`$overrides = '{"spec":{"hostPID":true,"hostNetwork":true,"nodeSelector":{"kubernetes.io/hostname":"' + $nodeName + '"},"tolerations":[{"operator":"Exists"}],"containers":[{"name":"nsenter","image":"alexeiled/nsenter:2.34","command":["/nsenter","--all","--target=1","--","su","-"],"stdin":true,"tty":true,"securityContext":{"privileged":true}}]}}' | ConvertTo-Json`);
+    terminal.sendText(`$overrides = '{"spec":{"hostPID":true,"hostNetwork":true,"nodeSelector":{"kubernetes.io/hostname":"' + $hostName + '"},"tolerations":[{"operator":"Exists"}],"containers":[{"name":"nsenter","image":"jpetazzo/nsenter:latest","command":["/nsenter","--all","--target=1","--","su","-"],"stdin":true,"tty":true,"securityContext":{"privileged":true}}]}}' | ConvertTo-Json`);
     terminal.sendText(`cls`);
     terminal.sendText(`kubectl.exe run ncenter-${nodeName} --restart=Never -it --rm --image=overriden --overrides=$overrides --attach $nodeName`);
     terminal.show();
@@ -302,7 +303,17 @@ async function nodeTerminal(target?: any) {
                         vscode.window.showErrorMessage(`Only works when 'terminal.integrated.shell.windows' is set to Powershell.`);
                     } else {
                         const nodeName = commandTarget.name;
-                        nodeTerminalImpl(vscode.window.createTerminal({name: `ncenter-${nodeName}`}), nodeName);
+                        const kubectl = await k8s.extension.kubectl.v1;
+                        if (!kubectl.available) {
+                            return;
+                        }
+                        const podDetails = await kubectl.api.invokeCommand(`get nodes ${nodeName} -o json`);
+                        if (podDetails && podDetails.stdout) {
+                            const nodeDetailsAsJson = JSON.parse(podDetails.stdout);
+                            if (nodeDetailsAsJson.metadata.labels['kubernetes.io/hostname']) {
+                                nodeTerminalImpl(vscode.window.createTerminal({name: `ncenter-${nodeName}`}), nodeName, nodeDetailsAsJson.metadata.labels['kubernetes.io/hostname']);
+                            }
+                        }
                     }
                     return;
                 } else {
