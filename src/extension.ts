@@ -277,12 +277,12 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(disposable);
 }
 
-function nodeTerminalImpl(terminal: vscode.Terminal, nodeName: string, hostName: string) {
+function nodeTerminalImpl(terminal: vscode.Terminal, nodeName: string, hostName: string, nsenterImage: string) {
     terminal.sendText(`cls`);
     terminal.sendText(`function prompt {"> "}`);
     terminal.sendText(`$hostName = '${hostName}'`);
     terminal.sendText(`$nodeName = '${nodeName}'`);
-    terminal.sendText(`$overrides = '{"spec":{"hostPID":true,"hostNetwork":true,"nodeSelector":{"kubernetes.io/hostname":"' + $hostName + '"},"tolerations":[{"operator":"Exists"}],"containers":[{"name":"nsenter","image":"jpetazzo/nsenter:latest","command":["/nsenter","--all","--target=1","--","su","-"],"stdin":true,"tty":true,"securityContext":{"privileged":true}}]}}' | ConvertTo-Json`);
+    terminal.sendText(`$overrides = '{"spec":{"hostPID":true,"hostNetwork":true,"nodeSelector":{"kubernetes.io/hostname":"' + $hostName + '"},"tolerations":[{"operator":"Exists"}],"containers":[{"name":"nsenter","image":"${nsenterImage}","command":["/nsenter","--all","--target=1","--","su","-"],"stdin":true,"tty":true,"securityContext":{"privileged":true}}]}}' | ConvertTo-Json`);
     terminal.sendText(`cls`);
     terminal.sendText(`kubectl.exe run ncenter-${nodeName} --restart=Never -it --rm --image=overriden --overrides=$overrides --attach $nodeName`);
     terminal.show();
@@ -298,6 +298,12 @@ async function nodeTerminal(target?: any) {
         if (commandTarget.nodeType === 'resource') {
             if (commandTarget.resourceKind.manifestKind === 'Node') {
                 if (process.platform === 'win32') {
+
+                    const nsenterImage = vscode.workspace.getConfiguration().get<string>('kubernetes-file-system-explorer.nsenter-image');
+                    if (!nsenterImage) {
+                        vscode.window.showErrorMessage(`Must set nsenter image in config: 'kubernetes-file-system-explorer.nsenter-image'`);
+                        return;
+                    }
                     const shell = vscode.workspace.getConfiguration().get<string>('terminal.integrated.shell.windows');
                     if (shell.indexOf('powershell') === -1) {
                         vscode.window.showErrorMessage(`Only works when 'terminal.integrated.shell.windows' is set to Powershell.`);
@@ -311,7 +317,10 @@ async function nodeTerminal(target?: any) {
                         if (podDetails && podDetails.stdout) {
                             const nodeDetailsAsJson = JSON.parse(podDetails.stdout);
                             if (nodeDetailsAsJson.metadata.labels['kubernetes.io/hostname']) {
-                                nodeTerminalImpl(vscode.window.createTerminal({name: `ncenter-${nodeName}`}), nodeName, nodeDetailsAsJson.metadata.labels['kubernetes.io/hostname']);
+                                nodeTerminalImpl(vscode.window.createTerminal({name: `ncenter-${nodeName}`}),
+                                    nodeName,
+                                    nodeDetailsAsJson.metadata.labels['kubernetes.io/hostname'],
+                                    nsenterImage);
                             }
                         }
                     }

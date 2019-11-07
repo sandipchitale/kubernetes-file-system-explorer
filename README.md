@@ -106,3 +106,7 @@ Terminal on Kubernetes nodes using nsenter (MS Windows only).
 ### 1.0.14
 
 Detect hostName from label.
+
+### 1.0.15
+
+User needs to specify the nsenter image using preference `kubernetes-file-system-explorer.nsenter-image`.

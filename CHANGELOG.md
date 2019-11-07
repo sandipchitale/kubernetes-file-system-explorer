@@ -1,5 +1,10 @@
 # Change Log
 
+
+### 1.0.15
+
+- User needs to specify the nsenter image using preference `kubernetes-file-system-explorer.nsenter-image`.
+
 ### 1.0.14
 
 - Detect hostName from label.

@@ -3,7 +3,7 @@
     "displayName": "Kubernetes Pod File System Explorer",
     "icon": "images/icon.png",
     "description": "Kubernetes Pod File System Explorer.",
-    "version": "1.0.14",
+    "version": "1.0.15",
     "keywords": [
         "kubernetes"
     ],
@@ -32,6 +32,14 @@
     ],
     "main": "./out/extension",
     "contributes": {
+        "configuration": {
+            "properties": {
+                "kubernetes-file-system-explorer.nsenter-image": {
+                    "type": "string",
+                    "description": "Specify nsenter images to use e.g. jpetazzo/nsenter:latest"
+                }
+            }
+        },
         "commands": [
             {
                 "command": "k8s.node.terminal",
