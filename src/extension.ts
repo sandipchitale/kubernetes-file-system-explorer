@@ -279,13 +279,24 @@ export async function activate(context: vscode.ExtensionContext) {
 
 function nodeTerminalImpl(terminal: vscode.Terminal, nodeName: string, hostName: string, nsenterImage: string) {
     terminal.sendText(`cls`);
-    terminal.sendText(`function prompt {"> "}`);
-    terminal.sendText(`$hostName = '${hostName}'`);
-    terminal.sendText(`$nodeName = '${nodeName}'`);
-    terminal.sendText(`$overrides = '{"spec":{"hostPID":true,"hostNetwork":true,"nodeSelector":{"kubernetes.io/hostname":"' + $hostName + '"},"tolerations":[{"operator":"Exists"}],"containers":[{"name":"nsenter","image":"${nsenterImage}","command":["/nsenter","--all","--target=1","--","su","-"],"stdin":true,"tty":true,"securityContext":{"privileged":true}}]}}' | ConvertTo-Json`);
-    terminal.sendText(`cls`);
-    terminal.sendText(`kubectl.exe run ncenter-${nodeName} --restart=Never -it --rm --image=overriden --overrides=$overrides --attach $nodeName`);
+    if (process.platform === 'win32') {
+        terminal.sendText(`function prompt {"> "}`);
+        terminal.sendText(`$hostName = '${hostName}'`);
+        terminal.sendText(`$nodeName = '${nodeName}'`);
+        terminal.sendText(`$overrides = '{"spec":{"hostPID":true,"hostNetwork":true,"nodeSelector":{"kubernetes.io/hostname":"' + $hostName + '"},"tolerations":[{"operator":"Exists"}],"containers":[{"name":"nsenter","image":"${nsenterImage}","command":["/nsenter","--all","--target=1","--","su","-"],"stdin":true,"tty":true,"securityContext":{"privileged":true}}]}}' | ConvertTo-Json`);
+        terminal.sendText(`cls`);
+        terminal.sendText(`kubectl.exe run ncenter-${nodeName} --restart=Never -it --rm --image=overriden --overrides=$overrides --attach $nodeName`);
+    } else {
+        terminal.sendText(`kubectl.exe run ncenter-${nodeName} --restart=Never -it --rm --image=overriden --overrides='{"spec":{"hostPID":true,"hostNetwork":true,"nodeSelector":{"kubernetes.io/hostname":"${hostName}"},"tolerations":[{"operator":"Exists"}],"containers":[{"name":"nsenter","image":"${nsenterImage}","command":["/nsenter","--all","--target=1","--","su","-"],"stdin":true,"tty":true,"securityContext":{"privileged":true}}]}}' --attach ${nodeName}`);
+    }
     terminal.show();
+    setTimeout(() => {
+        vscode.commands.executeCommand('extension.vsKubernetesRefreshExplorer');
+        terminal.sendText(`\n`);
+        setTimeout(() => {
+            vscode.commands.executeCommand('extension.vsKubernetesRefreshExplorer');
+        }, 5000);
+    }, 5000);
 }
 
 async function nodeTerminal(target?: any) {
@@ -297,8 +308,7 @@ async function nodeTerminal(target?: any) {
     if (commandTarget) {
         if (commandTarget.nodeType === 'resource') {
             if (commandTarget.resourceKind.manifestKind === 'Node') {
-                if (process.platform === 'win32') {
-
+                // if (process.platform === 'win32') {
                     const nsenterImage = vscode.workspace.getConfiguration().get<string>('kubernetes-file-system-explorer.nsenter-image');
                     if (!nsenterImage) {
                         vscode.window.showErrorMessage(`Must set nsenter image in config: 'kubernetes-file-system-explorer.nsenter-image'`);
@@ -325,9 +335,9 @@ async function nodeTerminal(target?: any) {
                         }
                     }
                     return;
-                } else {
-                    vscode.window.showErrorMessage(`Only works on windows.`);
-                }
+                // } else {
+                //     vscode.window.showErrorMessage(`Only works on windows.`);
+                // }
             }
         }
     }

@@ -1,5 +1,8 @@
 # Change Log
 
+### 1.0.15
+
+- Update README.
 
 ### 1.0.15
 
@@ -11,7 +14,7 @@
 
 ### 1.0.13
 
-- Terminal on Kubernetes nodes using nsenter (MS Windows only).
+- Terminal on Kubernetes nodes using nsenter.
 
 ### 1.0.11
 

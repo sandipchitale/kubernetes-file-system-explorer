@@ -3,7 +3,7 @@
     "displayName": "Kubernetes Pod File System Explorer",
     "icon": "images/icon.png",
     "description": "Kubernetes Pod File System Explorer.",
-    "version": "1.0.15",
+    "version": "1.0.16",
     "keywords": [
         "kubernetes"
     ],
@@ -71,7 +71,7 @@
             "view/item/context": [
                 {
                     "command": "k8s.node.terminal",
-                    "when": "isWindows && view == extension.vsKubernetesExplorer && viewItem =~ /vsKubernetes\\.resource\\.node/i"
+                    "when": "view == extension.vsKubernetesExplorer && viewItem =~ /vsKubernetes\\.resource\\.node/i"
                 },
                 {
                     "command": "k8s.pod.container.terminal",

@@ -29,6 +29,8 @@ to get listing of files and created tree nodes for them.
 
 It also supports the following commands:
 
+`k8s.node.terminal` (Terminal) - Start a shell into Node using nsenter. User must set the `kubernetes-file-system-explorer.nsenter-image` preference value to point to a `nsenter` image of choice e.g. `jpetazzo/nsenter:latest`.
+
 `k8s.pod.container.file.view` (View file) - Show the content of the file in editor. It basically runs:
 
 `kubectl exec -it pod-name -c containername -- cat /path/to/file`
@@ -101,7 +103,7 @@ Internal.
 
 ### 1.0.13
 
-Terminal on Kubernetes nodes using nsenter (MS Windows only).
+Terminal on Kubernetes nodes using nsenter.
 
 ### 1.0.14
 
@@ -110,3 +112,7 @@ Detect hostName from label.
 ### 1.0.15
 
 User needs to specify the nsenter image using preference `kubernetes-file-system-explorer.nsenter-image`.
+
+### 1.0.16
+
+Update README.
