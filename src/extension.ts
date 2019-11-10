@@ -308,49 +308,43 @@ async function nodeTerminal(target?: any) {
     if (commandTarget) {
         if (commandTarget.nodeType === 'resource') {
             if (commandTarget.resourceKind.manifestKind === 'Node') {
-                // if (process.platform === 'win32') {
-                    const nsenterImage = vscode.workspace.getConfiguration().get<string>('kubernetes-file-system-explorer.nsenter-image');
-                    if (!nsenterImage) {
-                        vscode.window.showErrorMessage(`Must set nsenter image in config: 'kubernetes-file-system-explorer.nsenter-image'`);
+                const nsenterImage = vscode.workspace.getConfiguration().get<string>('kubernetes-file-system-explorer.nsenter-image');
+                if (!nsenterImage) {
+                    vscode.window.showErrorMessage(`Must set nsenter image in config: 'kubernetes-file-system-explorer.nsenter-image'`);
+                    return;
+                }
+                const shell = vscode.workspace.getConfiguration().get<string>('terminal.integrated.shell.windows');
+                if (shell.indexOf('powershell') === -1) {
+                    vscode.window.showErrorMessage(`Only works when 'terminal.integrated.shell.windows' is set to Powershell.`);
+                } else {
+                    const nodeName = commandTarget.name;
+                    const kubectl = await k8s.extension.kubectl.v1;
+                    if (!kubectl.available) {
                         return;
                     }
-                    const shell = vscode.workspace.getConfiguration().get<string>('terminal.integrated.shell.windows');
-                    if (shell.indexOf('powershell') === -1) {
-                        vscode.window.showErrorMessage(`Only works when 'terminal.integrated.shell.windows' is set to Powershell.`);
-                    } else {
-                        const nodeName = commandTarget.name;
-                        const kubectl = await k8s.extension.kubectl.v1;
-                        if (!kubectl.available) {
-                            return;
-                        }
-                        const podDetails = await kubectl.api.invokeCommand(`get nodes ${nodeName} -o json`);
-                        if (podDetails && podDetails.stdout) {
-                            const nodeDetailsAsJson = JSON.parse(podDetails.stdout);
-                            if (nodeDetailsAsJson.metadata.labels['kubernetes.io/hostname']) {
-                                nodeTerminalImpl(vscode.window.createTerminal({name: `ncenter-${nodeName}`}),
-                                    nodeName,
-                                    nodeDetailsAsJson.metadata.labels['kubernetes.io/hostname'],
-                                    nsenterImage);
-                            }
+                    const podDetails = await kubectl.api.invokeCommand(`get nodes ${nodeName} -o json`);
+                    if (podDetails && podDetails.stdout) {
+                        const nodeDetailsAsJson = JSON.parse(podDetails.stdout);
+                        if (nodeDetailsAsJson.metadata.labels['kubernetes.io/hostname']) {
+                            nodeTerminalImpl(vscode.window.createTerminal({name: `ncenter-${nodeName}`}),
+                                nodeName,
+                                nodeDetailsAsJson.metadata.labels['kubernetes.io/hostname'],
+                                nsenterImage);
                         }
                     }
-                    return;
-                // } else {
-                //     vscode.window.showErrorMessage(`Only works on windows.`);
-                // }
+                }
+                return;
             }
         }
     }
-
 }
+
 async function terminal(target?: any) {
     if (target && target.nodeType === 'extension') {
         if (target.impl instanceof ContainerNode) {
             if (vscode.window.activeTerminal) {
                 const container = target.impl as ContainerNode;
-                vscode.window.activeTerminal.sendText(
-`kubectl exec -it ${container.podName} -c ${container.name} --namespace ${container.namespace} -- sh`
-                )
+                vscode.window.activeTerminal.sendText(`kubectl exec -it ${container.podName} -c ${container.name} --namespace ${container.namespace} -- sh`);
             }
         }
     }

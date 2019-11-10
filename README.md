@@ -2,9 +2,17 @@
 
 ## Features
 
-This extension adds tree nodes for the filesystem of a Kubernetes Pod under the Pod node in the Kubernetes Explorer View. Simply expands the treenode for a Pod to see it's filesystem. Works for Linux Pods only.
+It supports the following commands:
 
-For example, the following screenshot shows the
+| Command | Treenode Type| Description |
+|---------|----------|-------------|
+|`k8s.node.terminal` (Terminal)| Node |Start a shell into Node using nsenter. User must set the `kubernetes-file-system-explorer.nsenter-image` preference value to point to a `nsenter` image of choice e.g. `jpetazzo/nsenter:latest`.|
+|`k8s.pod.container.terminal` (Terminal)| Container |Starts a shell in the Container. It basically runs:<br/>`kubectl exec -it pod-name -c containername -- sh`|
+|`k8s.pod.container.folder.find` (Find)| Container Folder Node |Show the output of `find folderpath` in editor. It basically runs:<br/>`kubectl exec -it pod-name -c containername -- find /path/to/folder`|
+|`k8s.pod.container.folder.ls-al` (ls -al)| Container Folder Node |Show the output of `ls -al folderpath` in editor. It basically runs:<br/>`kubectl exec -it pod-name -c containername -- ls -al /path/to/folder`|
+|`k8s.pod.container.file.view` (View file)| Container File Node |Show the content of the file in editor. It basically runs:<br/>`kubectl exec -it pod-name -c containername -- cat /path/to/file`|
+
+This extension adds tree nodes for the Kubernetes Init Containers, Containers and filesystem of the Kubernetes Containers under the Pod node in the Kubernetes Explorer View. Simply expands the treenode for a Pod to see it's Init Containers, Containers and Container filesystem. For example, the following screenshot shows the:
 
 - the `haveged-445n7` pod
 - the `haveged` container
@@ -26,18 +34,6 @@ As the tree nodes for directories are expanded e.g. `/etc/`, it basically runs:
 `kubectl exec -it pod-name -c containername -- ls -f /etc/`
 
 to get listing of files and created tree nodes for them.
-
-It also supports the following commands:
-
-`k8s.node.terminal` (Terminal) - Start a shell into Node using nsenter. User must set the `kubernetes-file-system-explorer.nsenter-image` preference value to point to a `nsenter` image of choice e.g. `jpetazzo/nsenter:latest`.
-
-`k8s.pod.container.file.view` (View file) - Show the content of the file in editor. It basically runs:
-
-`kubectl exec -it pod-name -c containername -- cat /path/to/file`
-
-`k8s.pod.container.folder.find` (Find) - Show the output of `find folderpath` in editor. It basically runs:
-
-`kubectl exec -it pod-name -c containername -- find /path/to/folder`
 
 ## Requirements
 
@@ -114,5 +110,9 @@ Detect hostName from label.
 User needs to specify the nsenter image using preference `kubernetes-file-system-explorer.nsenter-image`.
 
 ### 1.0.16
+
+Update README.
+
+### 1.0.17
 
 Update README.
