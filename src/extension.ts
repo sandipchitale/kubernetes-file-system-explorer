@@ -8,21 +8,16 @@ const KUBERNETES_FILE_VIEW = 'kubernetes-file-view';
 const KUBERNETES_FOLDER_FIND = 'kubernetes-folder-find';
 const KUBERNETES_FOLDER_LS_AL = 'kubernetes-folder-ls-al';
 
-class FileNode implements k8s.ClusterExplorerV1.Node {
+
+class VolumeMountNode implements k8s.ClusterExplorerV1.Node {
     private podName: string;
     private namespace: string;
-    private containerName: string;
-    private path: string;
-    private name: string;
+    private volumeMount: any;
 
-    constructor(podName: string, namespace: string, path: string, name: string, containerName: string) {
+    constructor(podName: string, namespace: string, volumeMount: any) {
         this.podName = podName;
         this.namespace = namespace;
-        this.containerName = containerName;
-        this.path = path;
-        this.name = name
-            .replace(/\@$/, '')
-            .replace(/\*$/, '');
+        this.volumeMount = volumeMount;
     }
 
     async getChildren(): Promise<k8s.ClusterExplorerV1.Node[]> {
@@ -30,19 +25,71 @@ class FileNode implements k8s.ClusterExplorerV1.Node {
     }
 
     getTreeItem(): vscode.TreeItem {
-        const treeItem = new vscode.TreeItem(this.name, vscode.TreeItemCollapsibleState.None);
-        treeItem.tooltip = this.path + this.name;
-        treeItem.contextValue = 'containerfilenode';
+        const treeItem = new vscode.TreeItem('Volume mount: ' + this.volumeMount.name, vscode.TreeItemCollapsibleState.None);
+        treeItem.tooltip = JSON.stringify(this.volumeMount, null, '  ');
+        treeItem.contextValue = 'volumemountnode';
         return treeItem;
     }
+}
 
-    isFile() {
-        return true;
+class VolumeNode implements k8s.ClusterExplorerV1.Node {
+    private podName: string;
+    private namespace: string;
+    private volume: any;
+
+    constructor(podName: string, namespace: string, volume: any) {
+        this.podName = podName;
+        this.namespace = namespace;
+        this.volume = volume;
     }
 
-    async viewFile() {
-        let doc = await vscode.workspace.openTextDocument(vscode.Uri.parse(`kubernetes-file-view:${this.podName}:${this.namespace}:${this.containerName}:${this.path}/${this.name}`));
-        await vscode.window.showTextDocument(doc, { preview: false });
+    async getChildren(): Promise<k8s.ClusterExplorerV1.Node[]> {
+        return [];
+    }
+
+    getTreeItem(): vscode.TreeItem {
+        const treeItem = new vscode.TreeItem('Volume: ' + this.volume.name, vscode.TreeItemCollapsibleState.None);
+        treeItem.tooltip = JSON.stringify(this.volume, null, '  ');
+        treeItem.contextValue = 'volumenode';
+        return treeItem;
+    }
+}
+
+class ContainerNode implements k8s.ClusterExplorerV1.Node {
+    private kubectl: k8s.KubectlV1;
+    podName: string;
+    namespace: string;
+    name: string;
+    private image: string;
+    private initContainer: boolean;
+    private volumeMounts: any;
+
+    constructor(kubectl:  k8s.KubectlV1, podName: string, namespace: string, name: string, image: string, initContainer: boolean, volumeMounts: any) {
+        this.kubectl = kubectl;
+        this.podName = podName;
+        this.namespace = namespace;
+        this.name = name;
+        this.image = image;
+        this.initContainer = initContainer;
+        this.volumeMounts = volumeMounts;
+    }
+
+    async getChildren(): Promise<k8s.ClusterExplorerV1.Node[]> {
+        const volumeMountNodes = [];
+        if (this.volumeMounts && this.volumeMounts.length > 0) {
+            this.volumeMounts.forEach((volumeMount) => {
+                volumeMountNodes.push(new VolumeMountNode(this.name, this.namespace, volumeMount));
+            })
+        }
+        return volumeMountNodes;
+    }
+
+    getTreeItem(): vscode.TreeItem {
+        const treeItem = new vscode.TreeItem(`${this.initContainer ? 'Init Container:' : 'Container: ' } ${this.name} ( ${this.image } )`,
+            (this.volumeMounts && this.volumeMounts.length > 0 ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None));
+        treeItem.tooltip = `${this.initContainer ? 'Init Container:' : 'Container: ' } ${this.name} ( ${this.image } )`;
+        treeItem.contextValue = 'containernode';
+        return treeItem;
     }
 }
 
@@ -108,6 +155,44 @@ class FolderNode implements k8s.ClusterExplorerV1.Node {
     }
 }
 
+class FileNode implements k8s.ClusterExplorerV1.Node {
+    private podName: string;
+    private namespace: string;
+    private containerName: string;
+    private path: string;
+    private name: string;
+
+    constructor(podName: string, namespace: string, path: string, name: string, containerName: string) {
+        this.podName = podName;
+        this.namespace = namespace;
+        this.containerName = containerName;
+        this.path = path;
+        this.name = name
+            .replace(/\@$/, '')
+            .replace(/\*$/, '');
+    }
+
+    async getChildren(): Promise<k8s.ClusterExplorerV1.Node[]> {
+        return [];
+    }
+
+    getTreeItem(): vscode.TreeItem {
+        const treeItem = new vscode.TreeItem(this.name, vscode.TreeItemCollapsibleState.None);
+        treeItem.tooltip = this.path + this.name;
+        treeItem.contextValue = 'containerfilenode';
+        return treeItem;
+    }
+
+    isFile() {
+        return true;
+    }
+
+    async viewFile() {
+        let doc = await vscode.workspace.openTextDocument(vscode.Uri.parse(`kubernetes-file-view:${this.podName}:${this.namespace}:${this.containerName}:${this.path}/${this.name}`));
+        await vscode.window.showTextDocument(doc, { preview: false });
+    }
+}
+
 class FileSystemNodeContributor {
     private kubectl: k8s.KubectlV1;
 
@@ -128,83 +213,30 @@ class FileSystemNodeContributor {
                     const podDetails = await kubectl.api.invokeCommand(`get pods ${parent.name} -o json`);
                     if (podDetails && podDetails.stdout) {
                         const podDetailsAsJson = JSON.parse(podDetails.stdout);
-                        const containers = [];
-                        podDetailsAsJson.spec.containers.forEach((container) => {
-                            containers.push(new FolderNode(this.kubectl, parent.name, parent.namespace, '/', '', container.name));
+                        const volumes = [];
+                        podDetailsAsJson.spec.volumes.forEach((volume) => {
+                            volumes.push(new VolumeNode(parent.name, parent.namespace, volume));
                         });
-                        return containers;
+                        const containers = [];
+                        if (podDetailsAsJson.spec.initContainers) {
+                            podDetailsAsJson.spec.initContainers.forEach((container) => {
+                                containers.push(new ContainerNode(this.kubectl, parent.name, parent.namespace, container.name, container.image, true, container.volumeMounts));
+                            });
+                        }
+                        podDetailsAsJson.spec.containers.forEach((container) => {
+                            containers.push(new ContainerNode(this.kubectl, parent.name, parent.namespace, container.name, container.image, false, container.volumeMounts));
+                        });
+                        const containerFilesystems = [];
+                        podDetailsAsJson.spec.containers.forEach((container) => {
+                            containerFilesystems.push(new FolderNode(this.kubectl, parent.name, parent.namespace, '/', '', container.name));
+                        });
+                        return [...volumes, ...containers, ...containerFilesystems];
                     }
                 }
             }
             return [ new FolderNode(this.kubectl, parent.name, parent.namespace, '/', '', undefined) ];
         }
         return [];
-    }
-}
-class ContainerNode implements k8s.ClusterExplorerV1.Node {
-    private kubectl: k8s.KubectlV1;
-    podName: string;
-    namespace: string;
-    name: string;
-    private image: string;
-    private initContainer: boolean;
-
-    constructor(kubectl:  k8s.KubectlV1, podName: string, namespace: string, name: string, image: string, initContainer: boolean) {
-        this.kubectl = kubectl;
-        this.podName = podName;
-        this.namespace = namespace;
-        this.name = name;
-        this.image = image;
-        this.initContainer = initContainer;
-    }
-
-    async getChildren(): Promise<k8s.ClusterExplorerV1.Node[]> {
-        return [];
-    }
-
-    getTreeItem(): vscode.TreeItem {
-        const treeItem = new vscode.TreeItem(`${this.name} ( ${this.image } )`, vscode.TreeItemCollapsibleState.None);
-        treeItem.tooltip = `${this.initContainer ? 'Init Container:' : 'Container: ' } ${this.name} ( ${this.image } )`;
-        treeItem.contextValue = 'containernode';
-        return treeItem;
-    }
-}
-
-class ContainerNodeContributor {
-
-    private kubectl: k8s.KubectlV1;
-
-    constructor(kubectl:  k8s.KubectlV1) {
-        this.kubectl = kubectl;
-    }
-
-    contributesChildren(parent: k8s.ClusterExplorerV1.ClusterExplorerNode | undefined): boolean {
-        return parent && parent.nodeType === 'resource' && parent.resourceKind.manifestKind === 'Pod';
-    }
-
-    async getChildren(parent: k8s.ClusterExplorerV1.ClusterExplorerNode | undefined): Promise<k8s.ClusterExplorerV1.Node[]> {
-        const containers = [];
-        if (parent && parent.nodeType === 'resource' && parent.resourceKind.manifestKind === 'Pod') {
-            const explorer = await k8s.extension.clusterExplorer.v1;
-            if (explorer.available) {
-                const kubectl = await k8s.extension.kubectl.v1;
-                if (kubectl.available) {
-                    const podDetails = await kubectl.api.invokeCommand(`get pods ${parent.name} -o json`);
-                    if (podDetails && podDetails.stdout) {
-                        const podDetailsAsJson = JSON.parse(podDetails.stdout);
-                        if (podDetailsAsJson.spec.initContainers) {
-                            podDetailsAsJson.spec.initContainers.forEach((container) => {
-                                containers.push(new ContainerNode(this.kubectl, parent.name, parent.namespace, container.name, container.image, true));
-                            });
-                        }
-                        podDetailsAsJson.spec.containers.forEach((container) => {
-                            containers.push(new ContainerNode(this.kubectl, parent.name, parent.namespace, container.name, container.image, false));
-                        });
-                    }
-                }
-            }
-        }
-        return containers;
     }
 }
 
@@ -255,7 +287,6 @@ export async function activate(context: vscode.ExtensionContext) {
         return;
     }
 
-    explorer.api.registerNodeContributor(new ContainerNodeContributor(kubectl.api));
     explorer.api.registerNodeContributor(new FileSystemNodeContributor(kubectl.api));
     let disposable = vscode.commands.registerCommand('k8s.node.terminal', nodeTerminal);
     context.subscriptions.push(disposable);

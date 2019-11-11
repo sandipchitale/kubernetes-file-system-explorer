@@ -116,3 +116,8 @@ Update README.
 ### 1.0.17
 
 Update README.
+
+### 1.0.18
+
+Simplify code.
+Show Volumes under Pod and Volume Mounts under Containers.

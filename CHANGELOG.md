@@ -1,5 +1,10 @@
 # Change Log
 
+### 1.0.18
+
+- Simplify code.
+- Show Volumes under Pod and Volume Mounts under Containers.
+
 ### 1.0.17
 
 - Update README.
