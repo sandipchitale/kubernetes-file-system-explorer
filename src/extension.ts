@@ -135,7 +135,7 @@ class FolderNode implements k8s.ClusterExplorerV1.Node {
 
     getTreeItem(): vscode.TreeItem {
         let label = this.name.trim().length > 0 ? this.name : (this.containerName ? this.containerName + ':' : '') + this.path;
-        if (this.volumeMounts.includes(`${this.path}${this.name.substring(0, this.name.length - 1)}`)) {
+        if (this.volumeMounts.indexOf(`${this.path}${this.name.substring(0, this.name.length - 1)}`) !== -1) {
             label += ` [Mounted]`
         }
         const treeItem = new vscode.TreeItem(label, vscode.TreeItemCollapsibleState.Collapsed);
@@ -186,7 +186,7 @@ class FileNode implements k8s.ClusterExplorerV1.Node {
 
     getTreeItem(): vscode.TreeItem {
         let label = this.name;
-        if (this.volumeMounts.includes(`${this.path}${this.name}`)) {
+        if (this.volumeMounts.indexOf(`${this.path}${this.name}`) !== -1) {
             label += ` [Mounted]`
         }
         const treeItem = new vscode.TreeItem(label, vscode.TreeItemCollapsibleState.None);
