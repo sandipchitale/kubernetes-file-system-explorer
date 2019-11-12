@@ -100,14 +100,16 @@ class FolderNode implements k8s.ClusterExplorerV1.Node {
     private containerName: string;
     private path: string;
     private name: string;
+    private volumeMounts: Array<any>;
 
-    constructor(kubectl:  k8s.KubectlV1, podName: string, namespace: string, path: string, name: string, containerName: string) {
+    constructor(kubectl:  k8s.KubectlV1, podName: string, namespace: string, path: string, name: string, containerName: string, volumeMounts: Array<any>) {
         this.kubectl = kubectl;
         this.podName = podName;
         this.namespace = namespace;
         this.containerName = containerName;
         this.path = path;
         this.name = name;
+        this.volumeMounts = volumeMounts;
     }
 
     async getChildren(): Promise<k8s.ClusterExplorerV1.Node[]> {
@@ -122,9 +124,9 @@ class FolderNode implements k8s.ClusterExplorerV1.Node {
             const fileNames = lsCommandOutput.split('\n').filter((fileName) => fileName && fileName.trim().length > 0);
             return fileNames.map((fileName) => {
                 if (fileName.endsWith('/')) {
-                    return new FolderNode(this.kubectl, this.podName, this.namespace, this.path + this.name, fileName, this.containerName);
+                    return new FolderNode(this.kubectl, this.podName, this.namespace, this.path + this.name, fileName, this.containerName, this.volumeMounts);
                 } else {
-                    return new FileNode(this.podName, this.namespace, this.path+this.name, fileName, this.containerName);
+                    return new FileNode(this.podName, this.namespace, this.path+this.name, fileName, this.containerName, this.volumeMounts);
                 }
             });
         }
@@ -132,8 +134,12 @@ class FolderNode implements k8s.ClusterExplorerV1.Node {
     }
 
     getTreeItem(): vscode.TreeItem {
-        const treeItem = new vscode.TreeItem(this.name.trim().length > 0 ? this.name : (this.containerName ? this.containerName + ':' : '') + this.path, vscode.TreeItemCollapsibleState.Collapsed);
-        treeItem.tooltip = this.path + this.name;
+        let label = this.name.trim().length > 0 ? this.name : (this.containerName ? this.containerName + ':' : '') + this.path;
+        if (this.volumeMounts.includes(`${this.path}${this.name.substring(0, this.name.length - 1)}`)) {
+            label += ` [Mounted]`
+        }
+        const treeItem = new vscode.TreeItem(label, vscode.TreeItemCollapsibleState.Collapsed);
+        treeItem.tooltip = label;
         treeItem.iconPath = vscode.ThemeIcon.Folder;
         treeItem.contextValue = 'containerfoldernode';
         return treeItem;
@@ -161,8 +167,9 @@ class FileNode implements k8s.ClusterExplorerV1.Node {
     private containerName: string;
     private path: string;
     private name: string;
+    private volumeMounts: Array<any>;
 
-    constructor(podName: string, namespace: string, path: string, name: string, containerName: string) {
+    constructor(podName: string, namespace: string, path: string, name: string, containerName: string, volumeMounts: Array<any>) {
         this.podName = podName;
         this.namespace = namespace;
         this.containerName = containerName;
@@ -170,6 +177,7 @@ class FileNode implements k8s.ClusterExplorerV1.Node {
         this.name = name
             .replace(/\@$/, '')
             .replace(/\*$/, '');
+        this.volumeMounts = volumeMounts;
     }
 
     async getChildren(): Promise<k8s.ClusterExplorerV1.Node[]> {
@@ -177,8 +185,12 @@ class FileNode implements k8s.ClusterExplorerV1.Node {
     }
 
     getTreeItem(): vscode.TreeItem {
-        const treeItem = new vscode.TreeItem(this.name, vscode.TreeItemCollapsibleState.None);
-        treeItem.tooltip = this.path + this.name;
+        let label = this.name;
+        if (this.volumeMounts.includes(`${this.path}${this.name}`)) {
+            label += ` [Mounted]`
+        }
+        const treeItem = new vscode.TreeItem(label, vscode.TreeItemCollapsibleState.None);
+        treeItem.tooltip = this.path + label;
         treeItem.contextValue = 'containerfilenode';
         return treeItem;
     }
@@ -228,13 +240,18 @@ class FileSystemNodeContributor {
                         });
                         const containerFilesystems = [];
                         podDetailsAsJson.spec.containers.forEach((container) => {
-                            containerFilesystems.push(new FolderNode(this.kubectl, parent.name, parent.namespace, '/', '', container.name));
+                            const volumeMounts: Array<any> = [];
+                            if (container.volumeMounts && container.volumeMounts.length > 0) {
+                                container.volumeMounts.forEach((volumeMount) => {
+                                    volumeMounts.push(volumeMount.mountPath);
+                                });
+                            }
+                            containerFilesystems.push(new FolderNode(this.kubectl, parent.name, parent.namespace, '/', '', container.name, volumeMounts));
                         });
                         return [...volumes, ...containers, ...containerFilesystems];
                     }
                 }
             }
-            return [ new FolderNode(this.kubectl, parent.name, parent.namespace, '/', '', undefined) ];
         }
         return [];
     }
