@@ -333,9 +333,9 @@ function nodeTerminalImpl(terminal: vscode.Terminal, nodeName: string, hostName:
         terminal.sendText(`$nodeName = '${nodeName}'`);
         terminal.sendText(`$overrides = '{"spec":{"hostPID":true,"hostNetwork":true,"nodeSelector":{"kubernetes.io/hostname":"' + $hostName + '"},"tolerations":[{"operator":"Exists"}],"containers":[{"name":"nsenter","image":"${nsenterImage}","command":["/nsenter","--all","--target=1","--","su","-"],"stdin":true,"tty":true,"securityContext":{"privileged":true}}]}}' | ConvertTo-Json`);
         terminal.sendText(`cls`);
-        terminal.sendText(`kubectl.exe run ncenter-${nodeName} --restart=Never -it --rm --image=overriden --overrides=$overrides --attach $nodeName`);
+        terminal.sendText(`kubectl.exe run nsenter-${nodeName} --restart=Never -it --rm --image=overriden --overrides=$overrides --attach $nodeName`);
     } else {
-        terminal.sendText(`kubectl.exe run ncenter-${nodeName} --restart=Never -it --rm --image=overriden --overrides='{"spec":{"hostPID":true,"hostNetwork":true,"nodeSelector":{"kubernetes.io/hostname":"${hostName}"},"tolerations":[{"operator":"Exists"}],"containers":[{"name":"nsenter","image":"${nsenterImage}","command":["/nsenter","--all","--target=1","--","su","-"],"stdin":true,"tty":true,"securityContext":{"privileged":true}}]}}' --attach ${nodeName}`);
+        terminal.sendText(`kubectl.exe run nsenter-${nodeName} --restart=Never -it --rm --image=overriden --overrides='{"spec":{"hostPID":true,"hostNetwork":true,"nodeSelector":{"kubernetes.io/hostname":"${hostName}"},"tolerations":[{"operator":"Exists"}],"containers":[{"name":"nsenter","image":"${nsenterImage}","command":["/nsenter","--all","--target=1","--","su","-"],"stdin":true,"tty":true,"securityContext":{"privileged":true}}]}}' --attach ${nodeName}`);
     }
     terminal.show();
     setTimeout(() => {
@@ -374,7 +374,7 @@ async function nodeTerminal(target?: any) {
                     if (podDetails && podDetails.stdout) {
                         const nodeDetailsAsJson = JSON.parse(podDetails.stdout);
                         if (nodeDetailsAsJson.metadata.labels['kubernetes.io/hostname']) {
-                            nodeTerminalImpl(vscode.window.createTerminal({name: `ncenter-${nodeName}`}),
+                            nodeTerminalImpl(vscode.window.createTerminal({name: `nsenter-${nodeName}`}),
                                 nodeName,
                                 nodeDetailsAsJson.metadata.labels['kubernetes.io/hostname'],
                                 nsenterImage);

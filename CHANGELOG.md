@@ -1,5 +1,9 @@
 # Change Log
 
+### 1.0.20
+
+- Fix typo in nsenter.
+
 ### 1.0.19
 
 - Show mount points in file system with `[Mounted]` tag.

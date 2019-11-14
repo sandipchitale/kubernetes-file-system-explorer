@@ -3,7 +3,7 @@
     "displayName": "Kubernetes Pod File System Explorer",
     "icon": "images/icon.png",
     "description": "Kubernetes Pod File System Explorer.",
-    "version": "1.0.19",
+    "version": "1.0.20",
     "keywords": [
         "kubernetes"
     ],
