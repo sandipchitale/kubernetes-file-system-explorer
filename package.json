@@ -3,7 +3,7 @@
     "displayName": "Kubernetes Pod File System Explorer",
     "icon": "images/icon.png",
     "description": "Kubernetes Pod File System Explorer.",
-    "version": "1.0.20",
+    "version": "1.0.21",
     "keywords": [
         "kubernetes"
     ],
@@ -52,11 +52,6 @@
                 "category": "Kubernetes"
             },
             {
-                "command": "k8s.pod.container.file.view",
-                "title": "View file",
-                "category": "Kubernetes"
-            },
-            {
                 "command": "k8s.pod.container.folder.find",
                 "title": "Find",
                 "category": "Kubernetes"
@@ -64,6 +59,16 @@
             {
                 "command": "k8s.pod.container.folder.ls-al",
                 "title": "ls -al",
+                "category": "Kubernetes"
+            },
+            {
+                "command": "k8s.pod.container.file.view",
+                "title": "View file",
+                "category": "Kubernetes"
+            },
+            {
+                "command": "k8s.pod.container.file.tail-f",
+                "title": "tail -f",
                 "category": "Kubernetes"
             }
         ],
@@ -78,16 +83,20 @@
                     "when": "view == extension.vsKubernetesExplorer && viewItem =~ /containernode/i"
                 },
                 {
-                    "command": "k8s.pod.container.file.view",
-                    "when": "view == extension.vsKubernetesExplorer && viewItem =~ /containerfilenode/i"
-                },
-                {
                     "command": "k8s.pod.container.folder.find",
                     "when": "view == extension.vsKubernetesExplorer && viewItem =~ /containerfoldernode/i"
                 },
                 {
                     "command": "k8s.pod.container.folder.ls-al",
                     "when": "view == extension.vsKubernetesExplorer && viewItem =~ /containerfoldernode/i"
+                },
+                {
+                    "command": "k8s.pod.container.file.view",
+                    "when": "view == extension.vsKubernetesExplorer && viewItem =~ /containerfilenode/i"
+                },
+                {
+                    "command": "k8s.pod.container.file.tail-f",
+                    "when": "view == extension.vsKubernetesExplorer && viewItem =~ /containerfilenode/i"
                 }
             ]
         }

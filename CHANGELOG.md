@@ -1,5 +1,9 @@
 # Change Log
 
+### 1.0.21
+
+Add tail -f command on COntainer File Node.
+
 ### 1.0.20
 
 - Fix typo in nsenter.

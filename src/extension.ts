@@ -200,8 +200,14 @@ class FileNode implements k8s.ClusterExplorerV1.Node {
     }
 
     async viewFile() {
-        let doc = await vscode.workspace.openTextDocument(vscode.Uri.parse(`kubernetes-file-view:${this.podName}:${this.namespace}:${this.containerName}:${this.path}/${this.name}`));
+        let doc = await vscode.workspace.openTextDocument(vscode.Uri.parse(`kubernetes-file-view:${this.podName}:${this.namespace}:${this.containerName}:${this.path}${this.name}`));
         await vscode.window.showTextDocument(doc, { preview: false });
+    }
+
+    tailDashFFile() {
+        const terminal = vscode.window.activeTerminal || vscode.window.createTerminal();
+        terminal.show();
+        terminal.sendText(`kubectl.exe exec -it --namespace ${this.namespace} -c ${this.containerName} ${this.podName} -- tail -f ${this.path}${this.name}`);
     }
 }
 
@@ -309,11 +315,13 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(disposable);
     disposable = vscode.commands.registerCommand('k8s.pod.container.terminal', terminal);
     context.subscriptions.push(disposable);
-    disposable = vscode.commands.registerCommand('k8s.pod.container.file.view', viewFile);
-    context.subscriptions.push(disposable);
     disposable = vscode.commands.registerCommand('k8s.pod.container.folder.find', find);
     context.subscriptions.push(disposable);
     disposable = vscode.commands.registerCommand('k8s.pod.container.folder.ls-al', lsDashAl);
+    context.subscriptions.push(disposable);
+    disposable = vscode.commands.registerCommand('k8s.pod.container.file.view', viewFile);
+    context.subscriptions.push(disposable);
+    disposable = vscode.commands.registerCommand('k8s.pod.container.file.tail-f', tailDashFFile);
     context.subscriptions.push(disposable);
 
     const kubernetesContainerFileDocumentProvider = new KubernetesContainerFileDocumentProvider(kubectl.api);
@@ -398,17 +406,6 @@ async function terminal(target?: any) {
     }
 }
 
-async function viewFile(target?: any) {
-    if (target && target.nodeType === 'extension') {
-        if (target.impl instanceof FileNode) {
-            if ((target.impl as FileNode).isFile()) {
-                (target.impl as FileNode).viewFile();
-                return;
-            }
-        }
-    }
-}
-
 async function find(target?: any) {
     if (target && target.nodeType === 'extension') {
         if (target.impl instanceof FolderNode) {
@@ -426,6 +423,29 @@ async function lsDashAl(target?: any) {
         }
     }
 }
+
+async function viewFile(target?: any) {
+    if (target && target.nodeType === 'extension') {
+        if (target.impl instanceof FileNode) {
+            if ((target.impl as FileNode).isFile()) {
+                (target.impl as FileNode).viewFile();
+                return;
+            }
+        }
+    }
+}
+
+async function tailDashFFile(target?: any) {
+    if (target && target.nodeType === 'extension') {
+        if (target.impl instanceof FileNode) {
+            if ((target.impl as FileNode).isFile()) {
+                (target.impl as FileNode).tailDashFFile();
+                return;
+            }
+        }
+    }
+}
+
 
 export function deactivate() {
 }

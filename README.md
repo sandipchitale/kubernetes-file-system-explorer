@@ -10,7 +10,8 @@ It supports the following commands:
 |`k8s.pod.container.terminal` (Terminal)| Container |Starts a shell in the Container. It basically runs:<br/>`kubectl exec -it pod-name -c containername -- sh`|
 |`k8s.pod.container.folder.find` (Find)| Container Folder Node |Show the output of `find folderpath` in editor. It basically runs:<br/>`kubectl exec -it pod-name -c containername -- find /path/to/folder`|
 |`k8s.pod.container.folder.ls-al` (ls -al)| Container Folder Node |Show the output of `ls -al folderpath` in editor. It basically runs:<br/>`kubectl exec -it pod-name -c containername -- ls -al /path/to/folder`|
-|`k8s.pod.container.file.view` (View file)| Container File Node |Show the content of the file in editor. It basically runs:<br/>`kubectl exec -it pod-name -c containername -- cat /path/to/file`|
+|`k8s.pod.container.file.view` (View file)| Container File Node |Show the contents of the file in editor. It basically runs:<br/>`kubectl exec -it pod-name -c containername -- cat /path/to/file`|
+|`k8s.pod.container.file.tail-f` (tail -f)| Container File Node |Tail -f the contents of the file in terminal. It basically runs:<br/>`kubectl exec -it pod-name -c containername -- tail -f /path/to/file`.<br/>That way you can tail arbitrary files.|
 
 This extension adds tree nodes for the Kubernetes Init Containers, Containers and filesystem of the Kubernetes Containers under the Pod node in the Kubernetes Explorer View. Simply expands the treenode for a Pod to see it's Init Containers, Containers and Container filesystem. For example, the following screenshot shows the:
 
@@ -129,3 +130,7 @@ Show mount points in file system with `[Mounted]` tag.
 ### 1.0.20
 
 Fix typo in nsenter.
+
+### 1.0.21
+
+Add tail -f command on COntainer File Node.
