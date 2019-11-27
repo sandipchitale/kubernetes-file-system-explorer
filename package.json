@@ -3,7 +3,7 @@
     "displayName": "Kubernetes Pod File System Explorer",
     "icon": "images/icon.png",
     "description": "Kubernetes Pod File System Explorer.",
-    "version": "1.0.21",
+    "version": "1.0.22",
     "keywords": [
         "kubernetes"
     ],
@@ -62,6 +62,21 @@
                 "category": "Kubernetes"
             },
             {
+                "command": "k8s.pod.container.folder.cp-from",
+                "title": "kubectl cp from",
+                "category": "Kubernetes"
+            },
+            {
+                "command": "k8s.pod.container.folder.cp-to-from-folder",
+                "title": "kubectl cp to from folder",
+                "category": "Kubernetes"
+            },
+            {
+                "command": "k8s.pod.container.folder.cp-to-from-file",
+                "title": "kubectl cp to from file",
+                "category": "Kubernetes"
+            },
+            {
                 "command": "k8s.pod.container.file.view",
                 "title": "View file",
                 "category": "Kubernetes"
@@ -69,6 +84,11 @@
             {
                 "command": "k8s.pod.container.file.tail-f",
                 "title": "tail -f",
+                "category": "Kubernetes"
+            },
+            {
+                "command": "k8s.pod.container.file.cp-from",
+                "title": "kubectl cp from",
                 "category": "Kubernetes"
             }
         ],
@@ -91,11 +111,27 @@
                     "when": "view == extension.vsKubernetesExplorer && viewItem =~ /containerfoldernode/i"
                 },
                 {
+                    "command": "k8s.pod.container.folder.cp-from",
+                    "when": "view == extension.vsKubernetesExplorer && viewItem =~ /containerfoldernode/i"
+                },
+                {
+                    "command": "k8s.pod.container.folder.cp-to-from-folder",
+                    "when": "view == extension.vsKubernetesExplorer && viewItem =~ /containerfoldernode/i"
+                },
+                {
+                    "command": "k8s.pod.container.folder.cp-to-from-file",
+                    "when": "view == extension.vsKubernetesExplorer && viewItem =~ /containerfoldernode/i"
+                },
+                {
                     "command": "k8s.pod.container.file.view",
                     "when": "view == extension.vsKubernetesExplorer && viewItem =~ /containerfilenode/i"
                 },
                 {
                     "command": "k8s.pod.container.file.tail-f",
+                    "when": "view == extension.vsKubernetesExplorer && viewItem =~ /containerfilenode/i"
+                },
+                {
+                    "command": "k8s.pod.container.file.cp-from",
                     "when": "view == extension.vsKubernetesExplorer && viewItem =~ /containerfilenode/i"
                 }
             ]

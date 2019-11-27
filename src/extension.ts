@@ -3,6 +3,7 @@
 import * as vscode from 'vscode';
 import * as k8s from 'vscode-kubernetes-tools-api';
 import { platform } from 'os';
+import * as path from 'path';
 
 const KUBERNETES_FILE_VIEW = 'kubernetes-file-view';
 const KUBERNETES_FOLDER_FIND = 'kubernetes-folder-find';
@@ -95,12 +96,12 @@ class ContainerNode implements k8s.ClusterExplorerV1.Node {
 
 class FolderNode implements k8s.ClusterExplorerV1.Node {
     private kubectl: k8s.KubectlV1;
-    private podName: string;
-    private namespace: string;
-    private containerName: string;
-    private path: string;
-    private name: string;
-    private volumeMounts: Array<any>;
+    podName: string;
+    namespace: string;
+    containerName: string;
+    path: string;
+    name: string;
+    volumeMounts: Array<any>;
 
     constructor(kubectl:  k8s.KubectlV1, podName: string, namespace: string, path: string, name: string, containerName: string, volumeMounts: Array<any>) {
         this.kubectl = kubectl;
@@ -162,12 +163,12 @@ class FolderNode implements k8s.ClusterExplorerV1.Node {
 }
 
 class FileNode implements k8s.ClusterExplorerV1.Node {
-    private podName: string;
-    private namespace: string;
-    private containerName: string;
-    private path: string;
-    private name: string;
-    private volumeMounts: Array<any>;
+    podName: string;
+    namespace: string;
+    containerName: string;
+    path: string;
+    name: string;
+    volumeMounts: Array<any>;
 
     constructor(podName: string, namespace: string, path: string, name: string, containerName: string, volumeMounts: Array<any>) {
         this.podName = podName;
@@ -207,7 +208,7 @@ class FileNode implements k8s.ClusterExplorerV1.Node {
     tailDashFFile() {
         const terminal = vscode.window.activeTerminal || vscode.window.createTerminal();
         terminal.show();
-        terminal.sendText(`kubectl.exe exec -it --namespace ${this.namespace} -c ${this.containerName} ${this.podName} -- tail -f ${this.path}${this.name}`);
+        terminal.sendText(`kubectl exec -it --namespace ${this.namespace} -c ${this.containerName} ${this.podName} -- tail -f ${this.path}${this.name}`);
     }
 }
 
@@ -319,9 +320,17 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(disposable);
     disposable = vscode.commands.registerCommand('k8s.pod.container.folder.ls-al', lsDashAl);
     context.subscriptions.push(disposable);
+    disposable = vscode.commands.registerCommand('k8s.pod.container.folder.cp-from', folderCpFrom);
+    context.subscriptions.push(disposable);
+    disposable = vscode.commands.registerCommand('k8s.pod.container.folder.cp-to-from-folder', folderCpToFromFolder);
+    context.subscriptions.push(disposable);
+    disposable = vscode.commands.registerCommand('k8s.pod.container.folder.cp-to-from-file', folderCpToFromFile);
+    context.subscriptions.push(disposable);
     disposable = vscode.commands.registerCommand('k8s.pod.container.file.view', viewFile);
     context.subscriptions.push(disposable);
     disposable = vscode.commands.registerCommand('k8s.pod.container.file.tail-f', tailDashFFile);
+    context.subscriptions.push(disposable);
+    disposable = vscode.commands.registerCommand('k8s.pod.container.file.cp-from', fileCpFrom);
     context.subscriptions.push(disposable);
 
     const kubernetesContainerFileDocumentProvider = new KubernetesContainerFileDocumentProvider(kubectl.api);
@@ -341,9 +350,9 @@ function nodeTerminalImpl(terminal: vscode.Terminal, nodeName: string, hostName:
         terminal.sendText(`$nodeName = '${nodeName}'`);
         terminal.sendText(`$overrides = '{"spec":{"hostPID":true,"hostNetwork":true,"nodeSelector":{"kubernetes.io/hostname":"' + $hostName + '"},"tolerations":[{"operator":"Exists"}],"containers":[{"name":"nsenter","image":"${nsenterImage}","command":["/nsenter","--all","--target=1","--","su","-"],"stdin":true,"tty":true,"securityContext":{"privileged":true}}]}}' | ConvertTo-Json`);
         terminal.sendText(`cls`);
-        terminal.sendText(`kubectl.exe run nsenter-${nodeName} --restart=Never -it --rm --image=overriden --overrides=$overrides --attach $nodeName`);
+        terminal.sendText(`kubectl run nsenter-${nodeName} --restart=Never -it --rm --image=overriden --overrides=$overrides --attach $nodeName`);
     } else {
-        terminal.sendText(`kubectl.exe run nsenter-${nodeName} --restart=Never -it --rm --image=overriden --overrides='{"spec":{"hostPID":true,"hostNetwork":true,"nodeSelector":{"kubernetes.io/hostname":"${hostName}"},"tolerations":[{"operator":"Exists"}],"containers":[{"name":"nsenter","image":"${nsenterImage}","command":["/nsenter","--all","--target=1","--","su","-"],"stdin":true,"tty":true,"securityContext":{"privileged":true}}]}}' --attach ${nodeName}`);
+        terminal.sendText(`kubectl run nsenter-${nodeName} --restart=Never -it --rm --image=overriden --overrides='{"spec":{"hostPID":true,"hostNetwork":true,"nodeSelector":{"kubernetes.io/hostname":"${hostName}"},"tolerations":[{"operator":"Exists"}],"containers":[{"name":"nsenter","image":"${nsenterImage}","command":["/nsenter","--all","--target=1","--","su","-"],"stdin":true,"tty":true,"securityContext":{"privileged":true}}]}}' --attach ${nodeName}`);
     }
     terminal.show();
     setTimeout(() => {
@@ -424,6 +433,90 @@ async function lsDashAl(target?: any) {
     }
 }
 
+function folderCpFrom(target?: any) {
+    if (target && target.nodeType === 'extension') {
+        if (target.impl instanceof FolderNode) {
+            const folderNode = target.impl as FolderNode;
+            const openDialogOptions: vscode.OpenDialogOptions = {
+                openLabel: 'Select the folder to cp to',
+                canSelectFiles: false,
+                canSelectFolders: true
+            };
+            vscode.window.showOpenDialog(openDialogOptions).then((selected) => {
+                if (selected) {
+                    const terminal = vscode.window.activeTerminal || vscode.window.createTerminal();
+                    terminal.show();
+                    const fsPath = selected[0].fsPath;
+                    if (process.platform === 'win32') {
+                        terminal.sendText(`cd /D ${fsPath}`);
+                    } else {
+                        terminal.sendText(`cd ${fsPath}`);
+                    }
+                    terminal.sendText(`kubectl cp ${folderNode.namespace}/${folderNode.podName}:${folderNode.path}${folderNode.name} ${folderNode.name} -c ${folderNode.containerName}`);
+                }
+            });
+            return;
+        }
+    }
+}
+
+function folderCpToFromFolder(target?: any) {
+    if (target && target.nodeType === 'extension') {
+        if (target.impl instanceof FolderNode) {
+            const folderNode = target.impl as FolderNode;
+            const openDialogOptions: vscode.OpenDialogOptions = {
+                openLabel: 'Select the folder to cp',
+                canSelectFiles: false,
+                canSelectFolders: true
+            };
+            vscode.window.showOpenDialog(openDialogOptions).then((selected) => {
+                if (selected) {
+                    const terminal = vscode.window.activeTerminal || vscode.window.createTerminal();
+                    terminal.show();
+                    const fsPath = selected[0].fsPath;
+                    const dirname = path.dirname(fsPath);
+                    const basename = path.basename(fsPath);
+                    if (process.platform === 'win32') {
+                        terminal.sendText(`cd /D ${dirname}`);
+                    } else {
+                        terminal.sendText(`cd ${dirname}`);
+                    }
+                    terminal.sendText(`kubectl cp ${basename} ${folderNode.namespace}/${folderNode.podName}:${folderNode.path}${folderNode.name}${basename} -c ${folderNode.containerName}`);                }
+            });
+            return;
+        }
+    }
+}
+
+function folderCpToFromFile(target?: any) {
+    if (target && target.nodeType === 'extension') {
+        if (target.impl instanceof FolderNode) {
+            const folderNode = target.impl as FolderNode;
+            const openDialogOptions: vscode.OpenDialogOptions = {
+                openLabel: 'Select the file to cp',
+                canSelectFiles: true,
+                canSelectFolders: false
+            };
+            vscode.window.showOpenDialog(openDialogOptions).then((selected) => {
+                if (selected) {
+                    const terminal = vscode.window.activeTerminal || vscode.window.createTerminal();
+                    terminal.show();
+                    const fsPath = selected[0].fsPath;
+                    const dirname = path.dirname(fsPath);
+                    const basename = path.basename(fsPath);
+                    if (process.platform === 'win32') {
+                        terminal.sendText(`cd /D ${dirname}`);
+                    } else {
+                        terminal.sendText(`cd ${dirname}`);
+                    }
+                    terminal.sendText(`kubectl cp ${basename} ${folderNode.namespace}/${folderNode.podName}:${folderNode.path}${folderNode.name}${basename} -c ${folderNode.containerName}`);
+                }
+            });
+            return;
+        }
+    }
+}
+
 async function viewFile(target?: any) {
     if (target && target.nodeType === 'extension') {
         if (target.impl instanceof FileNode) {
@@ -442,6 +535,33 @@ async function tailDashFFile(target?: any) {
                 (target.impl as FileNode).tailDashFFile();
                 return;
             }
+        }
+    }
+}
+
+function fileCpFrom(target?: any) {
+    if (target && target.nodeType === 'extension') {
+        if (target.impl instanceof FileNode) {
+            const fileNode = target.impl as FileNode;
+            const openDialogOptions: vscode.OpenDialogOptions = {
+                openLabel: 'Select the folder to cp to',
+                canSelectFiles: false,
+                canSelectFolders: true
+            };
+            vscode.window.showOpenDialog(openDialogOptions).then((selected) => {
+                if (selected) {
+                    const terminal = vscode.window.activeTerminal || vscode.window.createTerminal();
+                    terminal.show();
+                    const fsPath = selected[0].fsPath;
+                    if (process.platform === 'win32') {
+                        terminal.sendText(`cd /D ${fsPath}`);
+                    } else {
+                        terminal.sendText(`cd ${fsPath}`);
+                    }
+                    terminal.sendText(`kubectl cp ${fileNode.namespace}/${fileNode.podName}:${fileNode.path}${fileNode.name} ${fileNode.name} -c ${fileNode.containerName}`);
+                }
+            });
+            return;
         }
     }
 }

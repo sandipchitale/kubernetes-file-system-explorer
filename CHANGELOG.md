@@ -1,5 +1,10 @@
 # Change Log
 
+### 1.0.22
+
+Add kubectl cp from/to commands on FileNodes and FolderNodes.
+
+
 ### 1.0.21
 
 Add tail -f command on COntainer File Node.
