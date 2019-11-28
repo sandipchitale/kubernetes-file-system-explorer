@@ -379,7 +379,7 @@ async function nodeTerminal(target?: any) {
                     return;
                 }
                 const shell = vscode.workspace.getConfiguration().get<string>('terminal.integrated.shell.windows');
-                if (shell.indexOf('powershell') === -1) {
+                if (process.platform === 'win32' && shell.indexOf('powershell') === -1) {
                     vscode.window.showErrorMessage(`Only works when 'terminal.integrated.shell.windows' is set to Powershell.`);
                 } else {
                     const nodeName = commandTarget.name;

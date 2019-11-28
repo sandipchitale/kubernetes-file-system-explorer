@@ -142,3 +142,7 @@ Add tail -f command on Container File Node.
 ### 1.0.22
 
 Add kubectl cp from/to commands on FileNodes and FolderNodes.
+
+### 1.0.23
+
+Fix Terminal command for Node on Linux.

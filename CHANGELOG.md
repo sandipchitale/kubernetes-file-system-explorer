@@ -1,13 +1,17 @@
 # Change Log
 
+### 1.0.23
+
+- Fix Terminal command for Node on Linux.
+
 ### 1.0.22
 
-Add kubectl cp from/to commands on FileNodes and FolderNodes.
+- Add kubectl cp from/to commands on FileNodes and FolderNodes.
 
 
 ### 1.0.21
 
-Add tail -f command on COntainer File Node.
+- Add tail -f command on COntainer File Node.
 
 ### 1.0.20
 
