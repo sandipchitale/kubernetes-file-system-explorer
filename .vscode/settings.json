@@ -1,0 +1,32 @@
+// Place your settings in this file to overwrite default and user settings.
+{
+    "files.exclude": {
+        "out": false // set this to true to hide the "out" folder with the compiled JS files
+    },
+    "search.exclude": {
+        "out": true // set this to false to include "out" folder in search results
+    },
+    "workbench.colorCustomizations": {
+        "activityBar.background": "#295577",
+        "activityBar.foreground": "#e7e7e7",
+        "activityBar.inactiveForeground": "#e7e7e799",
+        "activityBarBadge.background": "#2f1022",
+        "activityBarBadge.foreground": "#e7e7e7",
+        "titleBar.activeBackground": "#1c3a51",
+        "titleBar.inactiveBackground": "#1c3a5199",
+        "titleBar.activeForeground": "#e7e7e7",
+        "titleBar.inactiveForeground": "#e7e7e799",
+        "statusBar.background": "#1c3a51",
+        "statusBarItem.hoverBackground": "#295577",
+        "statusBar.foreground": "#e7e7e7",
+        "activityBar.activeBackground": "#295577",
+        "activityBar.activeBorder": "#2f1022",
+        "sash.hoverBorder": "#295577",
+        "statusBarItem.remoteBackground": "#1c3a51",
+        "statusBarItem.remoteForeground": "#e7e7e7"
+    },
+    "peacock.color": "#1c3a51",
+    "terminal.integrated.commandsToSkipShell": [
+        "vscode-cmd-aliases.execute"
+    ]
+}
