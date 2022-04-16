@@ -1,0 +1,155 @@
+{
+    "name": "kubernetes-file-system-explorer",
+    "displayName": "Kubernetes Pod File System Explorer",
+    "icon": "images/icon.png",
+    "description": "Kubernetes Pod File System Explorer.",
+    "version": "1.0.24",
+    "keywords": [
+        "kubernetes"
+    ],
+    "extensionDependencies": [
+        "ms-kubernetes-tools.vscode-kubernetes-tools"
+    ],
+    "publisher": "sandipchitale",
+    "author": {
+        "name": "Sandip Chitale"
+    },
+    "maintainers": [
+        "Sandip Chitale <sandipchitale@gmail.com>"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/sandipchitale/kubernetes-file-system-explorer"
+    },
+    "engines": {
+        "vscode": "^1.37.0"
+    },
+    "categories": [
+        "Other"
+    ],
+    "activationEvents": [
+        "onView:extension.vsKubernetesExplorer"
+    ],
+    "main": "./out/extension",
+    "contributes": {
+        "configuration": {
+            "properties": {
+                "kubernetes-file-system-explorer.nsenter-image": {
+                    "type": "string",
+                    "description": "Specify nsenter images to use e.g. jpetazzo/nsenter:latest. WARNING: Use at your own risk."
+                }
+            }
+        },
+        "commands": [
+            {
+                "command": "k8s.node.terminal",
+                "title": "Terminal",
+                "category": "Kubernetes"
+            },
+            {
+                "command": "k8s.pod.container.terminal",
+                "title": "Terminal",
+                "category": "Kubernetes"
+            },
+            {
+                "command": "k8s.pod.container.folder.find",
+                "title": "Find",
+                "category": "Kubernetes"
+            },
+            {
+                "command": "k8s.pod.container.folder.ls-al",
+                "title": "ls -al",
+                "category": "Kubernetes"
+            },
+            {
+                "command": "k8s.pod.container.folder.cp-from",
+                "title": "kubectl cp from",
+                "category": "Kubernetes"
+            },
+            {
+                "command": "k8s.pod.container.folder.cp-to-from-folder",
+                "title": "kubectl cp to from folder",
+                "category": "Kubernetes"
+            },
+            {
+                "command": "k8s.pod.container.folder.cp-to-from-file",
+                "title": "kubectl cp to from file",
+                "category": "Kubernetes"
+            },
+            {
+                "command": "k8s.pod.container.file.view",
+                "title": "View file",
+                "category": "Kubernetes"
+            },
+            {
+                "command": "k8s.pod.container.file.tail-f",
+                "title": "tail -f",
+                "category": "Kubernetes"
+            },
+            {
+                "command": "k8s.pod.container.file.cp-from",
+                "title": "kubectl cp from",
+                "category": "Kubernetes"
+            }
+        ],
+        "menus": {
+            "view/item/context": [
+                {
+                    "command": "k8s.node.terminal",
+                    "when": "view == extension.vsKubernetesExplorer && viewItem =~ /vsKubernetes\\.resource\\.node/i"
+                },
+                {
+                    "command": "k8s.pod.container.terminal",
+                    "when": "view == extension.vsKubernetesExplorer && viewItem =~ /containernode/i"
+                },
+                {
+                    "command": "k8s.pod.container.folder.find",
+                    "when": "view == extension.vsKubernetesExplorer && viewItem =~ /containerfoldernode/i"
+                },
+                {
+                    "command": "k8s.pod.container.folder.ls-al",
+                    "when": "view == extension.vsKubernetesExplorer && viewItem =~ /containerfoldernode/i"
+                },
+                {
+                    "command": "k8s.pod.container.folder.cp-from",
+                    "when": "view == extension.vsKubernetesExplorer && viewItem =~ /containerfoldernode/i"
+                },
+                {
+                    "command": "k8s.pod.container.folder.cp-to-from-folder",
+                    "when": "view == extension.vsKubernetesExplorer && viewItem =~ /containerfoldernode/i"
+                },
+                {
+                    "command": "k8s.pod.container.folder.cp-to-from-file",
+                    "when": "view == extension.vsKubernetesExplorer && viewItem =~ /containerfoldernode/i"
+                },
+                {
+                    "command": "k8s.pod.container.file.view",
+                    "when": "view == extension.vsKubernetesExplorer && viewItem =~ /containerfilenode/i"
+                },
+                {
+                    "command": "k8s.pod.container.file.tail-f",
+                    "when": "view == extension.vsKubernetesExplorer && viewItem =~ /containerfilenode/i"
+                },
+                {
+                    "command": "k8s.pod.container.file.cp-from",
+                    "when": "view == extension.vsKubernetesExplorer && viewItem =~ /containerfilenode/i"
+                }
+            ]
+        }
+    },
+    "scripts": {
+        "vscode:prepublish": "npm run compile",
+        "compile": "tsc -p ./",
+        "lint": "eslint . --ext .ts,.tsx",
+        "watch": "tsc -watch -p ./"
+    },
+    "devDependencies": {
+        "typescript": "^2.6.1",
+        "vscode": "^1.1.6",
+        "@types/node": "^7.0.43",
+        "@types/mocha": "^2.2.42"
+    },
+    "dependencies": {
+        "vscode-kubernetes-tools-api": "^1.0.0"
+    }
+}
