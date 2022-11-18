@@ -149,7 +149,9 @@ class FolderNode implements k8s.ClusterExplorerV1.Node {
         }
         const lsCommandOutput = lsResult.stdout;
         if (lsCommandOutput.trim().length > 0) {
-            const fileNames = lsCommandOutput.split('\n').filter((fileName) => fileName && fileName.trim().length > 0);
+            const fileNames = lsCommandOutput.split('\n')
+                .filter((fileName) => fileName && fileName.trim().length > 0)
+                .sort((a, b) => !a.endsWith('/') && b.endsWith('/') ? 1 : a.endsWith('/') && !b.endsWith('/') ? -1 : 0);
             return fileNames.map((fileName) => {
                 if (fileName.endsWith('/')) {
                     return new FolderNode(this.kubectl, this.podName, this.namespace, this.path + this.name, fileName, this.containerName, this.volumeMounts);
