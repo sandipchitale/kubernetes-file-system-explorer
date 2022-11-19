@@ -83,6 +83,11 @@
                 "category": "Kubernetes"
             },
             {
+                "command": "k8s.pod.container.file.edit",
+                "title": "Edit file",
+                "category": "Kubernetes"
+            },
+            {
                 "command": "k8s.pod.container.file.tail-f",
                 "title": "tail -f",
                 "category": "Kubernetes"
@@ -125,6 +130,10 @@
                 },
                 {
                     "command": "k8s.pod.container.file.view",
+                    "when": "view == extension.vsKubernetesExplorer && viewItem =~ /containerfilenode/i"
+                },
+                {
+                    "command": "k8s.pod.container.file.edit",
                     "when": "view == extension.vsKubernetesExplorer && viewItem =~ /containerfilenode/i"
                 },
                 {

@@ -4,6 +4,7 @@ import * as vscode from 'vscode';
 import * as k8s from 'vscode-kubernetes-tools-api';
 import { platform } from 'os';
 import * as path from 'path';
+import { randomUUID } from 'crypto';
 
 const KUBERNETES_FILE_VIEW = 'kubernetes-file-view';
 const KUBERNETES_FOLDER_FIND = 'kubernetes-folder-find';
@@ -233,6 +234,16 @@ class FileNode implements k8s.ClusterExplorerV1.Node {
         await vscode.window.showTextDocument(doc, { preview: false });
     }
 
+    async editFile() {
+        const localFile = await FileSystemHelper.copyFromKubectl(
+            this.namespace,
+            this.podName,
+            this.path + this.name
+        );
+        const doc = await vscode.workspace.openTextDocument(localFile);
+        await vscode.window.showTextDocument(doc, { preview: false });
+    }
+
     tailDashFFile() {
         const terminal = vscode.window.activeTerminal || vscode.window.createTerminal();
         terminal.show();
@@ -331,6 +342,75 @@ class FileSystemNodeContributor {
     }
 }
 
+interface FileInfo {
+    namespace: string;
+    pod: string;
+    file: string;
+}
+class FileSystemHelper {
+    private static kubectl: k8s.KubectlV1;
+    // list to hold currently copied/open files
+    private static UUID_LIST: {[key: string]: FileInfo} = {};
+    public static init(kubectl:  k8s.KubectlV1) {
+        FileSystemHelper.kubectl = kubectl;
+        vscode.workspace.onDidSaveTextDocument(async (e) => {
+            const pathSplitted = e.fileName.split(path.sep);
+            const file = pathSplitted[pathSplitted.length - 1];
+            const uuid = pathSplitted[pathSplitted.length - 2];
+            const info = FileSystemHelper.UUID_LIST[uuid];
+            if(info) {
+                const kubePath = info.namespace + '/' + info.pod + ':' + info.file;
+                const result = await FileSystemHelper.kubectl.invokeCommand(`cp ${e.fileName} ${kubePath}`);
+                if(!result || result.code !== 0) {
+                    vscode.window.showErrorMessage(`kubectl cp ${e.fileName} ${kubePath} failed: ${result.stderr}` );
+                    return null;
+                } else {
+                vscode.window.showInformationMessage(`Saved file ${file} to pod ${info.pod}`);
+                }
+            }
+        });
+    }
+    
+    private static getTempLocation() {
+        if(vscode.workspace.workspaceFolders !== undefined) {
+            return vscode.workspace.workspaceFolders[0].uri.fsPath;
+        }
+        throw new Error('No workspace root path found. Please open any workspace to determine a temporary storage location');
+    }
+    private static getTempFile(uuid: string, file: string) {
+        return path.resolve(FileSystemHelper.getTempLocation(), '.kubectl.tmp', uuid, file);
+    }
+    public static async copyFromKubectl(namespace: string, pod: string, file: string) {
+        const kubePath = `${namespace}/${pod}:${file}`;
+        const pathSplitted = file.split('/');
+        let uuid = randomUUID();
+        const existingUuid = Object.keys(FileSystemHelper.UUID_LIST).filter(
+            uuid => {
+                const info = FileSystemHelper.UUID_LIST[uuid];
+                return info.namespace === namespace && info.pod === pod && info.file === file;
+            }
+        );
+        if(existingUuid.length === 1) {
+            uuid = existingUuid[0];
+        }
+        
+        const tmpFile = FileSystemHelper.getTempFile(
+                uuid, pathSplitted[pathSplitted.length - 1]
+        );
+        const result = await FileSystemHelper.kubectl.invokeCommand(`cp ${kubePath} ${tmpFile}`);
+        if(!result || result.code !== 0) {
+            vscode.window.showErrorMessage(`kubectl cp ${kubePath} ${tmpFile} failed: ${result.stderr}` );
+            return null;
+        }
+        FileSystemHelper.UUID_LIST[uuid] = {
+            namespace,
+            pod,
+            file
+        }
+        return tmpFile;
+    }
+}
+
 class KubernetesContainerFileDocumentProvider implements vscode.TextDocumentContentProvider {
     private kubectl: k8s.KubectlV1;
 
@@ -377,6 +457,7 @@ export async function activate(context: vscode.ExtensionContext) {
         vscode.window.showErrorMessage(`kubectl not available.`);
         return;
     }
+    FileSystemHelper.init(kubectl.api)
 
     explorer.api.registerNodeContributor(new FileSystemNodeContributor(kubectl.api));
     let disposable = vscode.commands.registerCommand('k8s.node.terminal', nodeTerminal);
@@ -394,6 +475,8 @@ export async function activate(context: vscode.ExtensionContext) {
     disposable = vscode.commands.registerCommand('k8s.pod.container.folder.cp-to-from-file', folderCpToFromFile);
     context.subscriptions.push(disposable);
     disposable = vscode.commands.registerCommand('k8s.pod.container.file.view', viewFile);
+    context.subscriptions.push(disposable);
+    disposable = vscode.commands.registerCommand('k8s.pod.container.file.edit', editFile);
     context.subscriptions.push(disposable);
     disposable = vscode.commands.registerCommand('k8s.pod.container.file.tail-f', tailDashFFile);
     context.subscriptions.push(disposable);
@@ -594,6 +677,18 @@ async function viewFile(target?: any) {
         }
     }
 }
+
+async function editFile(target?: any) {
+    if (target && target.nodeType === 'extension') {
+        if (target.impl instanceof FileNode) {
+            if ((target.impl as FileNode).isFile()) {
+                (target.impl as FileNode).editFile();
+                return;
+            }
+        }
+    }
+}
+
 
 async function tailDashFFile(target?: any) {
     if (target && target.nodeType === 'extension') {
