@@ -238,6 +238,7 @@ class FileNode implements k8s.ClusterExplorerV1.Node {
         const localFile = await FileSystemHelper.copyFromKubectl(
             this.namespace,
             this.podName,
+            this.containerName,
             this.path + this.name
         );
         const doc = await vscode.workspace.openTextDocument(localFile);
@@ -345,6 +346,7 @@ class FileSystemNodeContributor {
 interface FileInfo {
     namespace: string;
     pod: string;
+    containerName: string;
     file: string;
 }
 class FileSystemHelper {
@@ -360,9 +362,9 @@ class FileSystemHelper {
             const info = FileSystemHelper.UUID_LIST[uuid];
             if(info) {
                 const kubePath = info.namespace + '/' + info.pod + ':' + info.file;
-                const result = await FileSystemHelper.kubectl.invokeCommand(`cp ${e.fileName} ${kubePath}`);
+                const result = await FileSystemHelper.kubectl.invokeCommand(`cp ${e.fileName} ${kubePath} -c ${info.containerName}`);
                 if(!result || result.code !== 0) {
-                    vscode.window.showErrorMessage(`kubectl cp ${e.fileName} ${kubePath} failed: ${result.stderr}` );
+                    vscode.window.showErrorMessage(`kubectl cp ${e.fileName} ${kubePath} -c ${info.containerName} failed: ${result.stderr}` );
                     return null;
                 } else {
                 vscode.window.showInformationMessage(`Saved file ${file} to pod ${info.pod}`);
@@ -375,12 +377,13 @@ class FileSystemHelper {
         if(vscode.workspace.workspaceFolders !== undefined) {
             return vscode.workspace.workspaceFolders[0].uri.fsPath;
         }
-        throw new Error('No workspace root path found. Please open any workspace to determine a temporary storage location');
+        vscode.window.showErrorMessage('No workspace root path found. Please open any workspace to determine a temporary storage location');
+        return null;
     }
     private static getTempFile(uuid: string, file: string) {
         return path.resolve(FileSystemHelper.getTempLocation(), '.kubectl.tmp', uuid, file);
     }
-    public static async copyFromKubectl(namespace: string, pod: string, file: string) {
+    public static async copyFromKubectl(namespace: string, pod: string, containerName: string, file: string) {
         const kubePath = `${namespace}/${pod}:${file}`;
         const pathSplitted = file.split('/');
         let uuid = randomUUID();
@@ -397,14 +400,15 @@ class FileSystemHelper {
         const tmpFile = FileSystemHelper.getTempFile(
                 uuid, pathSplitted[pathSplitted.length - 1]
         );
-        const result = await FileSystemHelper.kubectl.invokeCommand(`cp ${kubePath} ${tmpFile}`);
+        const result = await FileSystemHelper.kubectl.invokeCommand(`cp ${kubePath} ${tmpFile} -c ${containerName}`);
         if(!result || result.code !== 0) {
-            vscode.window.showErrorMessage(`kubectl cp ${kubePath} ${tmpFile} failed: ${result.stderr}` );
+            vscode.window.showErrorMessage(`kubectl cp ${kubePath} ${tmpFile} -c ${containerName} failed: ${result.stderr}` );
             return null;
         }
         FileSystemHelper.UUID_LIST[uuid] = {
             namespace,
             pod,
+            containerName,
             file
         }
         return tmpFile;
