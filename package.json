@@ -1,0 +1,165 @@
+{
+    "name": "kubernetes-file-system-explorer",
+    "displayName": "Kubernetes Pod File System Explorer and extras",
+    "icon": "images/icon.png",
+    "description": "Kubernetes Pod File System Explorer and extras.",
+    "version": "1.0.29",
+    "license": "SEE IN FILE LICENSE",
+    "keywords": [
+        "kubernetes"
+    ],
+    "extensionDependencies": [
+        "ms-kubernetes-tools.vscode-kubernetes-tools"
+    ],
+    "publisher": "sandipchitale",
+    "author": {
+        "name": "Sandip Chitale"
+    },
+    "maintainers": [
+        "Sandip Chitale <sandipchitale@gmail.com>"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/sandipchitale/kubernetes-file-system-explorer"
+    },
+    "engines": {
+        "vscode": "^1.62.0"
+    },
+    "categories": [
+        "Other"
+    ],
+    "activationEvents": [
+        "onView:extension.vsKubernetesExplorer"
+    ],
+    "main": "./out/extension",
+    "contributes": {
+        "configuration": {
+            "properties": {
+                "kubernetes-file-system-explorer.nsenter-image": {
+                    "type": "string",
+                    "description": "Specify nsenter images to use e.g. jpetazzo/nsenter:latest. WARNING: Use at your own risk."
+                }
+            }
+        },
+        "commands": [
+            {
+                "command": "k8s.node.terminal",
+                "title": "Terminal",
+                "category": "Kubernetes"
+            },
+            {
+                "command": "k8s.pod.container.terminal",
+                "title": "Terminal",
+                "category": "Kubernetes"
+            },
+            {
+                "command": "k8s.pod.container.folder.find",
+                "title": "Find",
+                "category": "Kubernetes"
+            },
+            {
+                "command": "k8s.pod.container.folder.ls-al",
+                "title": "ls -al",
+                "category": "Kubernetes"
+            },
+            {
+                "command": "k8s.pod.container.folder.cp-from",
+                "title": "kubectl cp from",
+                "category": "Kubernetes"
+            },
+            {
+                "command": "k8s.pod.container.folder.cp-to-from-folder",
+                "title": "kubectl cp to from folder",
+                "category": "Kubernetes"
+            },
+            {
+                "command": "k8s.pod.container.folder.cp-to-from-file",
+                "title": "kubectl cp to from file",
+                "category": "Kubernetes"
+            },
+            {
+                "command": "k8s.pod.container.file.view",
+                "title": "View file",
+                "category": "Kubernetes"
+            },
+            {
+                "command": "k8s.pod.container.file.tail-f",
+                "title": "tail -f",
+                "category": "Kubernetes"
+            },
+            {
+                "command": "k8s.pod.container.file.cp-from",
+                "title": "kubectl cp from",
+                "category": "Kubernetes"
+            }
+        ],
+        "menus": {
+            "view/item/context": [
+                {
+                    "command": "k8s.node.terminal",
+                    "when": "view == extension.vsKubernetesExplorer && viewItem =~ /vsKubernetes\\.resource\\.node/i"
+                },
+                {
+                    "command": "k8s.pod.container.terminal",
+                    "when": "view == extension.vsKubernetesExplorer && viewItem =~ /containernode/i"
+                },
+                {
+                    "command": "k8s.pod.container.folder.find",
+                    "when": "view == extension.vsKubernetesExplorer && viewItem =~ /containerfoldernode/i"
+                },
+                {
+                    "command": "k8s.pod.container.folder.ls-al",
+                    "when": "view == extension.vsKubernetesExplorer && viewItem =~ /containerfoldernode/i"
+                },
+                {
+                    "command": "k8s.pod.container.folder.cp-from",
+                    "when": "view == extension.vsKubernetesExplorer && viewItem =~ /containerfoldernode/i"
+                },
+                {
+                    "command": "k8s.pod.container.folder.cp-to-from-folder",
+                    "when": "view == extension.vsKubernetesExplorer && viewItem =~ /containerfoldernode/i"
+                },
+                {
+                    "command": "k8s.pod.container.folder.cp-to-from-file",
+                    "when": "view == extension.vsKubernetesExplorer && viewItem =~ /containerfoldernode/i"
+                },
+                {
+                    "command": "k8s.pod.container.file.view",
+                    "when": "view == extension.vsKubernetesExplorer && viewItem =~ /containerfilenode/i"
+                },
+                {
+                    "command": "k8s.pod.container.file.tail-f",
+                    "when": "view == extension.vsKubernetesExplorer && viewItem =~ /containerfilenode/i"
+                },
+                {
+                    "command": "k8s.pod.container.file.cp-from",
+                    "when": "view == extension.vsKubernetesExplorer && viewItem =~ /containerfilenode/i"
+                }
+            ]
+        }
+    },
+    "scripts": {
+        "vscode:prepublish": "npm run compile",
+        "compile": "tsc -p ./",
+        "watch": "tsc -watch -p ./",
+        "pretest": "npm run compile && npm run lint",
+        "lint": "eslint src --ext ts",
+        "test": "node ./out/test/runTest.js"
+    },
+    "devDependencies": {
+        "@types/glob": "^7.1.4",
+        "@types/mocha": "^9.0.0",
+        "@types/node": "14.x",
+        "@types/vscode": "^1.62.0",
+        "@typescript-eslint/eslint-plugin": "^5.1.0",
+        "@typescript-eslint/parser": "^5.1.0",
+        "@vscode/test-electron": "^1.6.2",
+        "eslint": "^8.1.0",
+        "glob": "^7.1.7",
+        "mocha": "^9.1.3",
+        "typescript": "^4.4.4"
+    },
+    "dependencies": {
+        "vscode-kubernetes-tools-api": "^1.3.0"
+    }
+}
