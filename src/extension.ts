@@ -557,7 +557,7 @@ function folderCpFrom(target?: any) {
                     const terminal = vscode.window.activeTerminal || vscode.window.createTerminal();
                     terminal.show();
                     const fsPath = selected[0].fsPath;
-                    if (process.platform === 'win32') {
+                    if (terminal.creationOptions.shellPath?.toLowerCase()?.includes('cmd.exe')) {
                         terminal.sendText(`cd /D ${fsPath}`);
                     } else {
                         terminal.sendText(`cd ${fsPath}`);
